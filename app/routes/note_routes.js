@@ -1,7 +1,7 @@
 
 //router funciton
 module.exports.router = function(app, db) {
-    app.get('/notes', (req, res) => {
+    app.get('/getAll', (req, res) => {
             db.query("SELECT * FROM user_profile", function (err, result) {
                 if (err) throw err;
                 var results = result;
@@ -9,7 +9,7 @@ module.exports.router = function(app, db) {
             });
           });
 
-    app.post('/record', (req, res) => {
-        res.send('wrote it down');
+    app.post('/return', (req, res) => {
+        res.send(JSON.stringify(req));
     });
 };

@@ -1,0 +1,4 @@
+deactivate all other active tokens on log in
+
+create system to pass user id based on credentials
+

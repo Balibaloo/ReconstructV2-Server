@@ -7,7 +7,7 @@ var mysql = require('mysql');
 
 const port = 1234;
 const dbhost = "localhost";
-const dbuser = "root";
+const dbuser = "ServerData";
 const dbpass = "SQLSECURE";
 const dbName = "PLACEHOLDERNAME";
 
@@ -18,7 +18,7 @@ var connection = mysql.createConnection({
   database : dbName,
 });
 
-app.use(Auth.checkCred);
+app.use(Auth.checkToken);
 app.use(bodyParser.urlencoded({ extended: true }));
 
 require('./app/routes')(app, connection);

@@ -1,3 +1,4 @@
+const Auth = require('./app/helpers/auther')
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
@@ -17,7 +18,9 @@ var connection = mysql.createConnection({
   database : dbName,
 });
 
+app.use(Auth.checkCred);
 app.use(bodyParser.urlencoded({ extended: true }));
+
 require('./app/routes')(app, connection);
 
 app.listen(port, () => {

@@ -4,8 +4,8 @@
   "description": "",
   "main": "SeriousServer.js",
   "scripts": {
-    "dev": "nodemon server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node SeriousServer.js",
+    "dev": "nodemon SeriousServer.js"
   },
   "author": "",
   "license": "ISC",

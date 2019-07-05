@@ -30,4 +30,8 @@ module.exports.router = function(app, db) {
         }
     });
 
+    app.post('/',(req,res) => {
+        res.send('Succes Connection')
+    })
+
 };

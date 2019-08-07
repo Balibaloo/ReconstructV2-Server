@@ -1,7 +1,6 @@
 var mysql = require('mysql')
 var bcrypt = require('bcrypt')
 var uniqueID = require('uniqid')
-var crypto = require('crypto')
 
 const dbhost = "localhost";
 const dbuser = "ServerAuther";
@@ -14,38 +13,8 @@ var authServer = mysql.createConnection({
     password: dbpass,
     database: dbName,
 });
-``
-
-module.exports.logToken = (generateToken, userID, callback) => {
-    authServer.query(`SELECT * FROM alltokens
-        WHERE userID = '${userID}'
-        AND isValid = 1`, (err, result) => {
-        if (err) {
-            console.log(err);
-            res.send('ServerError, please try again later')
-        };
-        //ISSUE result returns truthly even when no entries exist
-        console.log(JSON.stringify(result))
-        if (result) {
-            userToken = result[0]['Token']
-            console.log("token reused")
-        } else {
-            console.log("new token registred")
-            userToken = generateToken()
-            authServer.query(`INSERT INTO alltokens
-            (Token, isValid, userID, DateCreated)
-            VALUES ('${userToken}', 1,'${userID}', '${Date.now()}')`)
-        };
-        callback(userToken)
-    });
-
-
-
-};
 
 module.exports.checkToken = (req, res, next) => {
-    // add middleware to append user account to req
-
     if (req.headers.authorization) {
         var authCreds = req.headers.authorization.split(' ');
 
@@ -53,16 +22,17 @@ module.exports.checkToken = (req, res, next) => {
             const userToken = authCreds[1];
 
             authServer.query(`SELECT * FROM alltokens WHERE Token = '${userToken}'`,
-                (err, result) => {
+                (error, result) => {
 
-                    if (err) {
-                        console.log(err);
+                    if (error) {
+                        console.log(error);
                         res.send('ServerError, please try again later')
                     }
 
                     if (result) {
                         console.log(`token : ${result[0]["Token"]}`);
-                        req.headers.userID = result[0]["userID"]
+                        req.userData = {}
+                        req.userData.userID = result[0]["userID"]
                         next();
 
                     } else {
@@ -79,59 +49,118 @@ module.exports.checkToken = (req, res, next) => {
     };
 };
 
-module.exports.checkUP = (username, Clienthash, callback) => {
-    authServer.query(`SELECT Salt,Password,userID FROM login_credentials WHERE Username = '${username}'`, (err, result) => {
-        if (err) {
-            console.log(err);
-            res.send('ServerError, please try again later')
-        } else if (result) {
-            userSalt = result[0].Salt
-            bcrypt.compare(Clienthash + userSalt, result[0].Password, (error, result) => {
-                if (error) {
-                    callback(error)
-                } else if (result) {
-                    callback(null, result[0].UserID)
-                } else {
-                    callback(new Error('no user found'));
-                }
-            })
+module.exports.clientEncode = (req) => new Promise((resolve, reject) => {
+    var MasterSalt = '$2b$10$BjJdSB802DiH35SVuhITvO'
+    var tohash = req.userData.password + req.userData.username
+    bcrypt.hash(tohash, MasterSalt, (error, result) => {
+        if (error) {
+            req.error = error
+            req.error.details = 'Hash Error'
+            reject(req)
         } else {
-            callback(new Error('no user found'))
+            console.log('resolve 2')
+            resolve(req)
         }
     })
-}
+});
 
-module.exports.generateToken = () => {
-    return 'generatedTokens'
-} //gerenate token
+module.exports.checkUP = (req) => new Promise((resolve, reject) => {
 
-module.exports.clientEncode = (username, password, clientSalt) => {
-    var tohash = password + username
-    console.log("stringsalt", clientSalt)
-    return password
-    //bcrypt.hashSync(tohash, salt = clientSalt)
-}
-// client(append username and a string to password then hash that) send to server(use username to salt the hash and hash again)
+    authServer.query(`SELECT salt,password,userID FROM login_credentials WHERE username = '${req.userData.username}'`, (error, user) => {
+        user = user[0]
+        if (error) {
+            req.error = error
+            req.error.details = 'User select'
+            reject(req);
+        } else if (user) {
+            req.userData.userID = user.userID
+            userSalt = user.salt
+            bcrypt.hash(req.userData.password, userSalt, (error, compHash) => {
+                if (error) {
+                    req.error = error
+                    req.error.details = 'Hashing error'
+                    reject(req);
+                } else {
+                    if (compHash === user.password) {
+                        resolve(req)
+                    } else {
+                        error = new Error('No user found')
+                        req.error = error
+                        req.error.details = 'wrong password'
+                        reject(req);
+                    }
+                }
+            });
+        } else {
+            error = new Error('No user found')
+            req.error = error
+            req.error.details = 'wrong username'
+            reject(req);
+        }
+    })
+});
 
-module.exports.saveUser = ([UserID, Username, Password]) => {
-    bcrypt.genSalt(16, (err, salt) => {
-        bcrypt.hash(Password, salt, (error, Password) => {
+module.exports.saveUser = (req) => new Promise((resolve, reject) => {
+    bcrypt.genSalt(16, (error, salt) => {
+        bcrypt.hash(req.userData.password, salt, (error, password) => {
             if (error) {
-                console.log(error)
+                req.error = error
+                req.error.details = 'Hashing'
+                reject(req)
             } else {
-                authServer.query(`INSERT INTO login_credentials (userID, username, password, salt) VALUES ('${UserID}', '${Username}', '${Password}', '${salt}')`,
+                authServer.query(`INSERT INTO login_credentials (userID, username, password, salt) VALUES ('${req.userData.userID}', '${req.userData.username}', '${password}', '${salt}')`,
                     (error) => {
                         if (error) {
-                            console.log(error)
+                            req.error = error
+                            req.error.details = 'Saving'
+                            reject(req);
+
+                        } else {
+                            console.log("save success")
+                            console.log('resolve 3')
+                            resolve(req)
                         }
                     })
             }
         })
 
     })
+});
 
+module.exports.logToken = (req) => new Promise((resolve, reject) => {
+    authServer.query(`SELECT * FROM alltokens
+        WHERE userID = '${req.userData.userID}'
+        AND isValid = 1`, (error, result) => {
+        if (error) {
+            req.error = error
+            req.error.details = 'No valid token found'
+            reject(req);
+        } else {
+            result = result[0]
+        };
 
-}
+        //ISSUE result returns truthly even when no entries exist
+
+        if (result) {
+            req.userData.userToken = result['Token']
+            // dont give the user their token back, destroy all active tokens
+            resolve(req)
+        } else {
+            this.genID((newToken) => {
+                authServer.query(`INSERT INTO alltokens
+            (Token, isValid, userID, DateCreated)
+            VALUES ('${newToken}', 1,'${req.userData.userID}', '${Date.now()}')`, () => {
+                    console.log("new token registred")
+                    req.userData.userToken = newToken
+                    resolve(req)
+                })
+            })
+
+        };
+
+    });
+
+});
 
 module.exports.chechUniqueUser = (username) => {
     authServer.query(`SELECT * FROM login_credentials WHERE Username = '${username}'`, (error, results) => {
@@ -143,8 +172,8 @@ module.exports.chechUniqueUser = (username) => {
             return true
         }
     })
-}
+};
 
 module.exports.genID = (callback) => {
     callback(uniqueID())
-}
+};

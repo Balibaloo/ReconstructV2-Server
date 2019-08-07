@@ -2,3 +2,21 @@ deactivate all other active tokens on log in
 
 create system to pass user id based on credentials
 
+
+
+
+
+finish log in
+
+destroy all active tokens on login
+
+implement use of req.userdata
+add middleware to append user account to req
+
+disable client encode
+
+
+
+add error loging to file
+
+

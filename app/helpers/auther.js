@@ -58,7 +58,6 @@ module.exports.clientEncode = (req) => new Promise((resolve, reject) => {
             req.error.details = 'Hash Error'
             reject(req)
         } else {
-            console.log('resolve 2')
             resolve(req)
         }
     })
@@ -116,8 +115,7 @@ module.exports.saveUser = (req) => new Promise((resolve, reject) => {
                             reject(req);
 
                         } else {
-                            console.log("save success")
-                            console.log('resolve 3')
+                            console.log("new user saved")
                             resolve(req)
                         }
                     })

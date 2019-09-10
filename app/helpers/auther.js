@@ -29,10 +29,12 @@ module.exports.checkToken = (req, res, next) => {
                         res.send('ServerError, please try again later')
                     }
 
-                    if (result) {
-                        console.log(`token : ${result[0]["Token"]}`);
+                    if (result[0]) {
+                        result = result[0]
                         req.userData = {}
-                        req.userData.userID = result[0]["userID"]
+                        req.userData.userToken = result["Token"]
+                        req.userData.userID = result["userID"]
+                        console.log('user token authenticated')
                         next();
 
                     } else {

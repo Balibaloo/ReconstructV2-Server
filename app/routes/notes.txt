@@ -1,22 +1,36 @@
-deactivate all other active tokens on log in
-
-create system to pass user id based on credentials
-
-
-
-
-
-finish log in
+implement a cleaner id generation system
 
 destroy all active tokens on login
 
-implement use of req.userdata
-add middleware to append user account to req
-
 disable client encode
-
-
 
 add error loging to file
 
 
+\
+EXISTS (
+  SELECT
+    tag
+  FROM
+    wanted_tags
+  WHERE
+    tag = '${element}'
+)
+
+
+INSERT INTO
+  wanted_tags (tag, numOfPeople)
+values
+  ('${element}', $ { num }) END
+
+
+
+
+
+ BEGIN
+UPDATE
+  wanted_tags
+SET
+  numOfPeople = numOfPeople $ { type }
+WHERE
+  tag = '${element}' END ELSE BEGIN

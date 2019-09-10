@@ -15,6 +15,7 @@ var authServer = mysql.createConnection({
 });
 
 module.exports.checkToken = (req, res, next) => {
+    //// middleware that checks if the token provided with a request is valid
     if (req.headers.authorization) {
         var authCreds = req.headers.authorization.split(' ');
 
@@ -52,6 +53,7 @@ module.exports.checkToken = (req, res, next) => {
 };
 
 module.exports.clientEncode = (req) => new Promise((resolve, reject) => {
+    //// temporary function to act as the client side ecoding for authentication purpouses
     var MasterSalt = '$2b$10$BjJdSB802DiH35SVuhITvO'
     var tohash = req.userData.password + req.userData.username
     bcrypt.hash(tohash, MasterSalt, (error, result) => {
@@ -66,6 +68,7 @@ module.exports.clientEncode = (req) => new Promise((resolve, reject) => {
 });
 
 module.exports.checkUP = (req) => new Promise((resolve, reject) => {
+    //// checks username and password on login
 
     authServer.query(`SELECT salt,password,userID FROM login_credentials WHERE username = '${req.userData.username}'`, (error, user) => {
         user = user[0]
@@ -102,6 +105,7 @@ module.exports.checkUP = (req) => new Promise((resolve, reject) => {
 });
 
 module.exports.saveUser = (req) => new Promise((resolve, reject) => {
+    //// saves user into security databse
     bcrypt.genSalt(16, (error, salt) => {
         bcrypt.hash(req.userData.password, salt, (error, password) => {
             if (error) {
@@ -127,7 +131,8 @@ module.exports.saveUser = (req) => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.logToken = (req) => new Promise((resolve, reject) => {
+module.exports.createNewToken = (req) => new Promise((resolve, reject) => {
+    //// given a userID it creates and saves a new acces token
     authServer.query(`SELECT * FROM alltokens
         WHERE userID = '${req.userData.userID}'
         AND isValid = 1`, (error, result) => {
@@ -163,6 +168,7 @@ module.exports.logToken = (req) => new Promise((resolve, reject) => {
 });
 
 module.exports.chechUniqueUser = (username) => {
+    //// varifies that the username is unique
     authServer.query(`SELECT * FROM login_credentials WHERE Username = '${username}'`, (error, results) => {
         if (error) {
             console.log(error)

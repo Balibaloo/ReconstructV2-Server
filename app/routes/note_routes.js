@@ -5,8 +5,8 @@ const Auth = require('../helpers/auther')
 //////////////////////////////////////////////////////////////////////////////  HELPER FUNCTIONS
 
 var checkUniqueEmail = (db, Email) => {
-    db.query(`SELECT * 
-            FROM user_profile 
+    db.query(`SELECT *
+            FROM user_profile
             WHERE Email = '${Email}'`, (error, results) => {
         if (error) {
             console.log(error)
@@ -19,8 +19,8 @@ var checkUniqueEmail = (db, Email) => {
 };
 
 var checkUniqueUsername = (db, username) => {
-    db.query(`SELECT * 
-            FROM user_profile 
+    db.query(`SELECT *
+            FROM user_profile
             WHERE username = '${username}'`, (error, results) => {
         if (error) {
             console.log(error)
@@ -65,8 +65,8 @@ var arrayToSQL = (arr) => {
 }
 
 var getListing = (req) => new Promise((resolve, reject) => {
-    req.db.query(`SELECT * 
-                FROM listing 
+    req.db.query(`SELECT *
+                FROM listing
                 WHERE listingID = '${req.body.listingID}'`, (error, results) => {
         results = results[0]
         if (error) {
@@ -88,7 +88,7 @@ var getListing = (req) => new Promise((resolve, reject) => {
 
 var getListingItems = (req) => new Promise((resolve, reject) => {
     req.db.query(`SELECT *
-                FROM listing_item 
+                FROM listing_item
                 WHERE listingID = '${req.body.listingID}'`, (error, results) => {
         if (error) {
             req.error = error
@@ -115,7 +115,7 @@ var getListingItems = (req) => new Promise((resolve, reject) => {
 var saveViewRequest = (req) => new Promise((resolve, reject) => {
     /////////// check if userid != author id
     Auth.genID((newID) => {
-        req.db.query(`INSERT INTO view_log 
+        req.db.query(`INSERT INTO view_log
                     (viewID, userID ,listingID)
                     VALUES ('${newID}', '${req.userData.userID}', '${req.listing.listingID}')`, (error) => {
             if (error) {
@@ -155,8 +155,8 @@ var changeWantedTags = (req) => new Promise((resolve, reject) => {
         })
     });
 
-    db.query(`SELECT wantedTags 
-            FROM user_profile 
+    db.query(`SELECT wantedTags
+            FROM user_profile
             WHERE userID = '${req.userData.userID}'`,
         (error, results) => {
             if (error) {
@@ -260,13 +260,15 @@ module.exports.router = function (app, db) {
         saveUserPromise(req)
             .then(Auth.clientEncode) ////////////////////////////
             .then(Auth.saveUser)
+            .then(Auth.logToken)
             .then((req) => {
-                res.send('User Created')
+                res.send({'message' : 'User Created',
+                'userToken': req.userData.userToken})
             })
             .catch((req) => {
                 console.log('User create error (', req.error.details, ')', req.error.message);
                 res.send(req.error)
-                db.query(`DELETE FROM user_profile 
+                db.query(`DELETE FROM user_profile
                         WHERE userID = '${req.userData.userID}'`,
                     (error) => {
                         console.log('User Clean up Success')
@@ -311,8 +313,8 @@ module.exports.router = function (app, db) {
     });
 
     app.get('/getUserProfile', Auth.checkToken, (req, res) => {
-        db.query(`SELECT * 
-                FROM user_profile 
+        db.query(`SELECT *
+                FROM user_profile
                 WHERE userID = '${req.userData.userID}' `, function (error, result) {
             if (error) {
                 throw error
@@ -357,8 +359,8 @@ module.exports.router = function (app, db) {
             var authorID = req.userData.userID
             var inherited_tags = createTagsArray(itemList)
 
-            db.query(`INSERT INTO listing 
-(listingID, authorID, title, body, inherited_tags, mainPhoto , end_date, location) 
+            db.query(`INSERT INTO listing
+(listingID, authorID, title, body, inherited_tags, mainPhoto , end_date, location)
 VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]','${mainPhoto}','${end_date}','${location}')`,
                 (error) => {
                     if (error) {
@@ -437,10 +439,10 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
 
     app.get('/getFilteredListings', (req, res) => {
         //////////////////////////////// WIP
-        db.query(`SELECT * 
+        db.query(`SELECT *
             FROM listing
-            WHERE inherited_tags 
-            LIKE 
+            WHERE inherited_tags
+            LIKE
             IN `,
             (error, results) => {
                 console.log(`(${req.body.filterTags})`)
@@ -457,8 +459,8 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
     app.get('/getRecentListings', Auth.checkToken, (req, res) => {
         db.query(`SELECT *
     FROM listing
-    RIGHT JOIN 
-    (SELECT * 
+    RIGHT JOIN
+    (SELECT *
         FROM view_log
         ORDER BY view_date DESC
         LIMIT 10
@@ -507,8 +509,8 @@ VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.titl
     });
 
     app.get('/getUserMessages', Auth.checkToken, (req, res) => {
-        db.query(`SELECT * 
-    FROM message_history 
+        db.query(`SELECT *
+    FROM message_history
     WHERE targetID = '${req.userData.userID}'`, (error, results) => {
             if (error) {
                 console.log('message fetch error', error);

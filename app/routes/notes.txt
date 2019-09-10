@@ -1,0 +1,36 @@
+implement a cleaner id generation system
+
+destroy all active tokens on login
+
+disable client encode
+
+add error loging to file
+
+
+\
+EXISTS (
+  SELECT
+    tag
+  FROM
+    wanted_tags
+  WHERE
+    tag = '${element}'
+)
+
+
+INSERT INTO
+  wanted_tags (tag, numOfPeople)
+values
+  ('${element}', $ { num }) END
+
+
+
+
+
+ BEGIN
+UPDATE
+  wanted_tags
+SET
+  numOfPeople = numOfPeople $ { type }
+WHERE
+  tag = '${element}' END ELSE BEGIN

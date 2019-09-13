@@ -181,5 +181,6 @@ module.exports.chechUniqueUser = (username) => {
 };
 
 module.exports.genID = (callback) => {
+    //// callback that generates new ID
     callback(uniqueID())
 };

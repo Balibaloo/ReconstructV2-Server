@@ -5,6 +5,7 @@ const Auth = require('../helpers/auther')
 //////////////////////////////////////////////////////////////////////////////  HELPER FUNCTIONS
 
 var checkUniqueEmail = (db, Email) => {
+    //// checks if an email adress is already saved in the databse
     db.query(`SELECT *
             FROM user_profile
             WHERE Email = '${Email}'`, (error, results) => {
@@ -19,6 +20,7 @@ var checkUniqueEmail = (db, Email) => {
 };
 
 var checkUniqueUsername = (db, username) => {
+    //// checks if a username is already saved in the database
     db.query(`SELECT *
             FROM user_profile
             WHERE username = '${username}'`, (error, results) => {
@@ -34,6 +36,7 @@ var checkUniqueUsername = (db, username) => {
 };
 
 var createTagsArray = (itemList) => {
+    //// creates an array of non duplicate tags of the items in the itemList list
     let allTags = new Set()
 
     itemList.forEach((item) => {
@@ -47,6 +50,7 @@ var createTagsArray = (itemList) => {
 };
 
 var arrayToSQL = (arr) => {
+    //// converts an array to an SQL insertable format String
     let finalString = '('
     arr.forEach((item, index) => {
         if (index !== 0) {
@@ -65,6 +69,7 @@ var arrayToSQL = (arr) => {
 }
 
 var getListing = (req) => new Promise((resolve, reject) => {
+    //// pulls a Listing entry from databse given listingID
     req.db.query(`SELECT *
                 FROM listing
                 WHERE listingID = '${req.body.listingID}'`, (error, results) => {
@@ -87,6 +92,7 @@ var getListing = (req) => new Promise((resolve, reject) => {
 });
 
 var getListingItems = (req) => new Promise((resolve, reject) => {
+    //// pulls every item associated with a listingID from database
     req.db.query(`SELECT *
                 FROM listing_item
                 WHERE listingID = '${req.body.listingID}'`, (error, results) => {
@@ -96,6 +102,7 @@ var getListingItems = (req) => new Promise((resolve, reject) => {
             reject(req)
         } else if (results[0]) {
             results.forEach((element, index) => {
+                //// converts arrays stored in text form to array objects
                 results[index].tags = element.tags.replace('[', '').replace(']', '').split(',')
                 results[index].images = element.images.replace('[', '').replace(']', '').split(',')
             });
@@ -113,7 +120,8 @@ var getListingItems = (req) => new Promise((resolve, reject) => {
 });
 
 var saveViewRequest = (req) => new Promise((resolve, reject) => {
-    /////////// check if userid != author id
+    //// logs a view request if the authorID does not match userID
+    if (req.userData.userID != req.listing.authorID) {
     Auth.genID((newID) => {
         req.db.query(`INSERT INTO view_log
                     (viewID, userID ,listingID)
@@ -126,12 +134,14 @@ var saveViewRequest = (req) => new Promise((resolve, reject) => {
                 resolve(req)
             }
         })
-    })
+    })}
 });
 
 var changeWantedTags = (req) => new Promise((resolve, reject) => {
-    let db = req.db
+    //// changes a users wantedTags array and global wanted tags table on tag changes
     // needs [body.newTags]
+
+    let db = req.db
 
     let modifyTagsPromise = ([db, array, type]) => new Promise((resolve, reject) => {
         let num = (type == "+ 1") ? 1 : 0
@@ -174,10 +184,7 @@ var changeWantedTags = (req) => new Promise((resolve, reject) => {
                     return newTags.indexOf(el) == -1;
                 });
 
-                console.log('tagsToAdd ', tagsToAdd)
-                console.log('tagsToRemove ', tagsToRemove)
-
-                modifyTagsPromise([db, tagsToAdd, "- 1"])
+                modifyTagsPromise([db, tagsToRemove, "- 1"])
                     .then(modifyTagsPromise([db, tagsToAdd, "+ 1"]))
                     .then(resolve(req))
                     .catch((error) => {

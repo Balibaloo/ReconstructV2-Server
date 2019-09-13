@@ -1,4 +1,3 @@
- const Auth = require('./app/helpers/auther')
  const bodyParser = require('body-parser');
  const express = require('express');
  const app = express();

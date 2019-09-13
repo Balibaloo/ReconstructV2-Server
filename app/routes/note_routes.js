@@ -1,6 +1,7 @@
 //router funciton
 /////////////////////// ADD FUNCTION REQUIREMENTS
 const Auth = require('../helpers/auther')
+const imageHandler = require('../helpers/imageHandler')
 
 //////////////////////////////////////////////////////////////////////////////  HELPER FUNCTIONS
 
@@ -197,6 +198,15 @@ var changeWantedTags = (req) => new Promise((resolve, reject) => {
 
 
 module.exports.router = function (app, db) {
+
+    //////////////////////////////////////////////////////////////////////////  TEST ZONE
+
+    app.get('/getImages',(req,res) =>{
+
+        imageHandler.getImages(req.query.images.split(','))
+            .then((loadedImages) => res.send(loadedImages))
+            .catch(console.log)
+    });
 
     app.get('/', (req, res) => {
         res.send('Succes Connection')

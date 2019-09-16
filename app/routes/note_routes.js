@@ -123,19 +123,20 @@ var getListingItems = (req) => new Promise((resolve, reject) => {
 var saveViewRequest = (req) => new Promise((resolve, reject) => {
     //// logs a view request if the authorID does not match userID
     if (req.userData.userID != req.listing.authorID) {
-    Auth.genID((newID) => {
-        req.db.query(`INSERT INTO view_log
+        Auth.genID((newID) => {
+            req.db.query(`INSERT INTO view_log
                     (viewID, userID ,listingID)
                     VALUES ('${newID}', '${req.userData.userID}', '${req.listing.listingID}')`, (error) => {
-            if (error) {
-                req.error = error
-                req.error.details = 'lsiting view save error'
-                reject(req)
-            } else {
-                resolve(req)
-            }
+                if (error) {
+                    req.error = error
+                    req.error.details = 'lsiting view save error'
+                    reject(req)
+                } else {
+                    resolve(req)
+                }
+            })
         })
-    })}
+    }
 });
 
 var changeWantedTags = (req) => new Promise((resolve, reject) => {
@@ -201,7 +202,7 @@ module.exports.router = function (app, db) {
 
     //////////////////////////////////////////////////////////////////////////  TEST ZONE
 
-    app.get('/getImages',(req,res) =>{
+    app.get('/getImages', (req, res) => {
 
         imageHandler.getImages(req.query.images.split(','))
             .then((loadedImages) => res.send(loadedImages))
@@ -209,7 +210,9 @@ module.exports.router = function (app, db) {
     });
 
     app.get('/', (req, res) => {
-        res.send('Succes Connection')
+        res.send({
+            "message": "hello"
+        });
     });
 
     app.get('//', Auth.checkToken, (req, res) => {
@@ -279,8 +282,10 @@ module.exports.router = function (app, db) {
             .then(Auth.saveUser)
             .then(Auth.logToken)
             .then((req) => {
-                res.send({'message' : 'User Created',
-                'userToken': req.userData.userToken})
+                res.send({
+                    'message': 'User Created',
+                    'userToken': req.userData.userToken
+                })
             })
             .catch((req) => {
                 console.log('User create error (', req.error.details, ')', req.error.message);

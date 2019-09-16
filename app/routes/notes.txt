@@ -6,6 +6,10 @@ disable client encode
 
 add error loging to file
 
+add data limits and data requirements to each request
+
+change to standard response structure
+
 
 \
 EXISTS (

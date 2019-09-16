@@ -202,7 +202,6 @@ module.exports.router = function (app, db) {
     //////////////////////////////////////////////////////////////////////////  TEST ZONE
 
     app.get('/getImages',(req,res) =>{
-
         imageHandler.getImages(req.query.images.split(','))
             .then((loadedImages) => res.send(loadedImages))
             .catch(console.log)
@@ -219,6 +218,7 @@ module.exports.router = function (app, db) {
     //////////////////////////////////////////////////////////////////////////  USER ACCOUTNS
 
     app.get('/checkUniqueUsername', (req, res) => {
+       //// requires body.username
         if (checkUniqueUsername(req.body.username)) {
             res.send('username available')
         } else {
@@ -227,6 +227,7 @@ module.exports.router = function (app, db) {
     });
 
     app.get('/checkUniqueEmail', (req, res) => {
+        //// requires body.email
         if (checkUniqueEmail(req.body.email)) {
             res.send('this email has not been used')
         } else {
@@ -235,6 +236,14 @@ module.exports.router = function (app, db) {
     });
 
     app.post('/auth/createAccount', (req, res) => {
+        // requires body.{
+        // username, password String
+        // firstName , lastName
+        // email
+        // phone
+        // wan
+        //}
+
         var saveUserPromise = (req) => new Promise((resolve, reject) => {
 
             var {
@@ -244,7 +253,6 @@ module.exports.router = function (app, db) {
                 lastName,
                 email,
                 phone,
-                wanted_tags
             } = req.body
 
             req.userData = {
@@ -261,7 +269,7 @@ module.exports.router = function (app, db) {
                 req.userData.userID = userID
                 db.query(`INSERT INTO user_profile
                         (userID, fName, lName, email, phone)
-                        VALUES ('${req.userData.userID}','${firstName}','${lastName}','${email}',${phone},[${wanted_tags}])`,
+                        VALUES ('${req.userData.userID}','${firstName}','${lastName}','${email}',${phone},[])`,
                     (error, result) => {
                         if (error) {
                             req.error = error

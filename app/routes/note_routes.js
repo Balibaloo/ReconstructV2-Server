@@ -2,6 +2,7 @@
 /////////////////////// ADD FUNCTION REQUIREMENTS
 const Auth = require('../helpers/auther')
 const imageHandler = require('../helpers/imageHandler')
+const GSON = require('gson')
 
 //////////////////////////////////////////////////////////////////////////////  HELPER FUNCTIONS
 
@@ -209,8 +210,14 @@ module.exports.router = function (app, db) {
     });
 
     app.get('/', (req, res) => {
-        res.send({
-            "message": "hello"
+        console.log('request received')
+        res.append('headerAppend', 'something')
+        res.status(201).json({
+            body: 'request received',
+            data: {
+                somedata: "hello"
+            },
+            "something": "wellHello"
         });
     });
 
@@ -248,25 +255,7 @@ module.exports.router = function (app, db) {
         //}
 
         var saveUserPromise = (req) => new Promise((resolve, reject) => {
-
-            var {
-                username,
-                password,
-                firstName,
-                lastName,
-                email,
-                phone,
-            } = req.body
-
-            req.userData = {
-                username,
-                password,
-                firstName,
-                lastName,
-                email,
-                phone,
-                wanted_tags
-            }
+            req.userData = req.body
 
             Auth.genID((userID) => {
                 req.userData.userID = userID

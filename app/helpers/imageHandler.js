@@ -1,20 +1,21 @@
 FS = require('fs')
 path = require('path')
 
-module.exports.getImages = (ImageNameArray) => new Promise((resolves, rejects) => {
-    ImageNameArray.map((ImageName) => {
-        imagePath = path.join(__dirname,"../../ImageStorage"+ImageName)
-        try{
-            imageFile = FS.readFile(imagePath)
-        }catch{
-            imageFile = "Image Not Found"
+module.exports.getImages = (ImageName) => new Promise((resolves, rejects) => {
+    console.log(ImageName)
+    imagePath = path.join(__dirname, "../../ImageStorage/" + ImageName + ".jpg")
+    imageFile = FS.readFile(imagePath, null, (err, data) => {
+        if (err) {
+            console.log(err)
+            rejects(err)
+        } else {
+            saveadta = {
+                "imageName": ImageName,
+                "imageFile": data
+            }
+            console.log(saveadta)
+            resolves(saveadta)
         }
 
-        saveadta = {"imageName" :ImageName,"imageFile" : imageFile}
-        console.log(saveadta)
-        return saveadta
     })
-    console.log(ImageNameArray)
-    resolves(ImageNameArray)
-
 })

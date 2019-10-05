@@ -204,25 +204,28 @@ module.exports.router = function (app, db) {
     //////////////////////////////////////////////////////////////////////////  TEST ZONE
 
     app.get('/getImages', (req, res) => {
-        imageHandler.getImages(req.query.images.split(','))
-            .then((loadedImages) => res.send(loadedImages))
-            .catch(console.log)
+        if (!req.query.images) {
+            res.send("No images given to load")
+        } else {
+            imageHandler.getImages(req.query.images).then((loadedImages) => {
+                    res.send(loadedImages);
+                    console.log(loadedImages)
+                })
+                .catch(console.log)
+        }
     });
 
     app.get('/', (req, res) => {
         console.log('request received')
-        res.append('headerAppend', 'something')
-        res.status(201).json({
-            body: 'request received',
-            data: {
-                somedata: "hello"
-            },
-            "something": "wellHello"
+        res.json({
+            "message": "Conection Successful!"
         });
     });
 
     app.get('//', Auth.checkToken, (req, res) => {
-        res.send('Succes Authenticated Connection')
+        res.json({
+            "message": "Authenticated Conection Successful!"
+        });
     });
 
     //////////////////////////////////////////////////////////////////////////  USER ACCOUTNS
@@ -230,28 +233,39 @@ module.exports.router = function (app, db) {
     app.get('/checkUniqueUsername', (req, res) => {
         //// requires body.username
         if (checkUniqueUsername(req.body.username)) {
-            res.send('username available')
+            res.json({
+                "isUnused": True,
+                "message": 'username available'
+            });
         } else {
-            res.send('username not available')
+            res.json({
+                "isUnused": False,
+                "message": 'username not available'
+            });
         }
     });
 
     app.get('/checkUniqueEmail', (req, res) => {
         //// requires body.email
         if (checkUniqueEmail(req.body.email)) {
-            res.send('this email has not been used')
+            res.json({
+                "isUnused": True,
+                "message": 'username available'
+            });
         } else {
-            res.send('this email is already linked to an account')
+            res.json({
+                "isUnused": False,
+                "message": 'username not available'
+            });
         }
     });
 
-    app.post('/auth/createAccount', (req, res) => {
+    app.post('/createAccount', (req, res) => {
         // requires body.{
         // username, password String
         // firstName , lastName
         // email
         // phone
-        // wan
         //}
 
         var saveUserPromise = (req) => new Promise((resolve, reject) => {
@@ -279,14 +293,17 @@ module.exports.router = function (app, db) {
             .then(Auth.saveUser)
             .then(Auth.logToken)
             .then((req) => {
-                res.send({
+                res.json({
                     'message': 'User Created',
                     'userToken': req.userData.userToken
                 })
             })
             .catch((req) => {
                 console.log('User create error (', req.error.details, ')', req.error.message);
-                res.send(req.error)
+                res.json({
+                    'message': 'Could not create user',
+                    'error': req.error
+                })
                 db.query(`DELETE FROM user_profile
                         WHERE userID = '${req.userData.userID}'`,
                     (error) => {
@@ -311,27 +328,33 @@ module.exports.router = function (app, db) {
             })
 
             logInPromise(req)
-                .then(Auth.clientEncode)
+                .then(Auth.clientEncode) /////////////////////////////////////
                 .then(Auth.checkUP)
                 .then(Auth.logToken)
                 .then((req) => {
-                    res.send({
+                    res.json({
+                        'message': 'Logged in succesfully',
                         'userToken': req.userData.userToken
                     })
                 })
                 .catch((error) => {
                     console.log('Log in error (', error.details, ')', error);
-                    res.send(error)
+                    res.status(500).json({
+                        'message': 'Log In failiure',
+                        'error': error
+                    })
                 })
 
 
         } else {
-            res.send("Error, no credentials provided")
+            res.status(403).json({
+                'message': "no credentials provided",
+            })
         }
 
     });
 
-    app.get('/getUserProfile', Auth.checkToken, (req, res) => {
+    app.get('/auth/getUserProfile', Auth.checkToken, (req, res) => {
         db.query(`SELECT *
                 FROM user_profile
                 WHERE userID = '${req.userData.userID}' `, function (error, result) {
@@ -339,9 +362,14 @@ module.exports.router = function (app, db) {
                 throw error
             } else if (result[0]) {
                 delete result[0].userID
-                res.send(result[0]);
+                res.status(200).json({
+                    "message": "Profile Fetches Succesfully",
+                    "userProfile": result[0]
+                })
             } else {
-                res.send('no user found')
+                res.status(404).json({
+                    "message": 'no user found'
+                })
             };
 
         });
@@ -351,11 +379,16 @@ module.exports.router = function (app, db) {
         req.db = db;
         changeWantedTags(req)
             .then((req) => {
-                res.send('Wanted Tags Changed Successfully')
+                res.json({
+                    "message": 'Wanted Tags Changed Successfully'
+                })
             })
             .catch((req) => {
                 console.log('Tag Change Error (', req.error.details, ')', req.error.message);
-                res.send(req.error)
+                res.status(500).json({
+                    "message": 'Server Error',
+                    "error": req.error
+                })
             })
     });
 
@@ -374,7 +407,6 @@ module.exports.router = function (app, db) {
             } = req.body
 
             var listingID = idOne
-            var post_date = new Date
             var authorID = req.userData.userID
             var inherited_tags = createTagsArray(itemList)
 
@@ -384,7 +416,10 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
                 (error) => {
                     if (error) {
                         console.log(error)
-                        res.send('server error')
+                        res.status(500).json({
+                            "message": 'Server Error',
+                            "error": error
+                        })
                     } else {
                         let itemListString = ''
                         itemList.forEach((item, index) => {
@@ -398,13 +433,16 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
 
                         db.query(`INSERT INTO listing_item (itemID, listingID, name, description, tags, images) VALUES ${itemListString}`, (error) => {
                             if (error) {
-                                console.log('listing item save error')
-                                res.send('server error, please try again later')
+                                console.log('Listing Item Save Error')
+                                res.status(500).json({
+                                    "message": 'Server Error',
+                                    "error": error
+                                })
                             } else {
-                                console.log('listing saved successfully')
-                                res.send({
-                                    "message": 'listing saved successfully',
-                                    "listingID": listingID
+                                console.log('Listing Saved Successfully')
+                                res.json({
+                                    "message": 'Listing Saved Successfully',
+                                    "Data": listingID
                                 })
                             }
 
@@ -424,12 +462,18 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
         getListing(req)
             .then(getListingItems)
             .then((req) => {
-                console.log('listing fetched successfully')
-                res.send(req.listing)
+                console.log('Listing Fetched Successfully')
+                res.json({
+                    "message": 'Listing Fetched Succesfully',
+                    "Data": req.listing
+                })
             })
             .catch((req) => {
-                res.send(req.error)
-                console.log('Listing fetch error (', req.error.details, ')', req.error.message);
+                res.status(500).json({
+                    "message": 'Server Error',
+                    "error": req.error
+                })
+                console.log('Listing Fetch Error (', req.error.details, ')', req.error.message);
             })
     });
 
@@ -439,13 +483,18 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
             .then(getListingItems)
             .then(saveViewRequest)
             .then((req) => {
-                console.log('listing fetched successfully')
-                res.send(req.listing)
+                console.log('Listing Fetched Successfully')
+                res.json({
+                    "message": 'Listing Fetched Succesfully',
+                    "Data": req.listing
+                })
             })
             .catch((req) => {
-                console.log(req)
-                res.send(req.error)
-                console.log('Listing fetch error (', req.error.details, ')', req.error.message);
+                res.status(500).json({
+                    "message": 'Server Error',
+                    "error": req.error
+                })
+                console.log('Listing Fetch Error (', req.error.details, ')', req.error.message);
             })
     });
 
@@ -467,10 +516,16 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
                 console.log(`(${req.body.filterTags})`)
                 if (error) {
                     console.log('Filter listing error ', error)
-                    res.send(`server error please try again later`)
+                    res.status(500).json({
+                        "message": 'Server Error',
+                        "error": req.error
+                    })
                 } else {
-                    console.log('filtered results sent successfully')
-                    res.send(results)
+                    console.log('Filtered Results Sent Succesfully')
+                    res.json({
+                        "message": 'Filtered Results Fetched Succesfully',
+                        "Data": results
+                    })
                 }
             })
     });
@@ -488,11 +543,17 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
     WHERE userID = '${req.userData.userID}'
     `, (error, results) => {
             if (error) {
-                console.log('recent listing error ', error)
-                res.send(`server error please try again later`)
+                console.log('Recent Listing Error ', error)
+                res.status(500).json({
+                    "message": 'Server Error',
+                    "error": error
+                })
             } else {
-                console.log('recent results sent successfully')
-                res.send(results)
+                console.log('Recent Listings Sent Successfully')
+                res.json({
+                    "message": 'Recent Listings Fetched Succesfully',
+                    "Data": results
+                })
             }
         })
     });
@@ -500,10 +561,16 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
     app.get('/getDesiredItems', (req, res) => {
         db.query(`SELECT * FROM wanted_tags`, (error, results) => {
             if (error) {
-                console.log('get desired items error', error)
-                res.send(error)
+                console.log('Get Desired Items Error: ', error)
+                res.status(500).json({
+                    "message": 'Server Error',
+                    "error": error
+                })
             } else {
-                res.send(results)
+                res.json({
+                    "message": 'Desired Items Fetched Succesfully',
+                    "Datat": results
+                })
             }
         });
     })
@@ -516,11 +583,16 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
 (messageID,senderID,targetID,title,body,time_sent)
 VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.title},${req.body.body},${new Date})`, (error, results) => {
                 if (error) {
-                    console.log('message sending error :', error)
-                    res.send(error)
+                    console.log('Message Sending Error :', error)
+                    res.status(500).json({
+                        "message": 'Server Error',
+                        "error": error
+                    })
                 } else {
-                    console.log('user message sent successfully')
-                    res.send('message sent')
+                    console.log('User Message Sent Successfully')
+                    res.json({
+                        "message": 'Message Sent'
+                    })
                 }
             })
         })
@@ -532,13 +604,21 @@ VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.titl
     FROM message_history
     WHERE targetID = '${req.userData.userID}'`, (error, results) => {
             if (error) {
-                console.log('message fetch error', error);
-                res.send(error)
+                console.log('Message Fetch Error', error);
+                res.status(500).json({
+                    "message": 'Server Error',
+                    "error": req.error
+                })
             } else if (results[0]) {
-                console.log('user messages fetched successfully')
-                res.send(results)
+                console.log('User Messages Fetched Successfully')
+                res.json({
+                    "message": 'Messages Fetched Succesfully',
+                    "Data": results
+                })
             } else {
-                res.send('no messages found')
+                res.status(500).json({
+                    "message": 'No Messages Found'
+                })
             }
         })
     });

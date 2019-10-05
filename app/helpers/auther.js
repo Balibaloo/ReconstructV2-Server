@@ -27,7 +27,10 @@ module.exports.checkToken = (req, res, next) => {
 
                     if (error) {
                         console.log(error);
-                        res.send('ServerError, please try again later')
+                        res.status(500).json({
+                            "messge": 'Server Error, please try again later',
+                            "error": error
+                        })
                     }
 
                     if (result[0]) {
@@ -35,20 +38,26 @@ module.exports.checkToken = (req, res, next) => {
                         req.userData = {}
                         req.userData.userToken = result["Token"]
                         req.userData.userID = result["userID"]
-                        console.log('user token authenticated')
+                        console.log('User Token Authenticated')
                         next();
 
                     } else {
-                        res.send('Error, token not valid')
+                        res.status(403).json({
+                            "message": 'Token Not valid'
+                        })
                     };
                 });
 
         } else {
-            res.send("Error, wrong auth type")
+            res.status(403).json({
+                "message": "Wrong Auth Type"
+            })
         };
 
     } else {
-        res.send("Error, no credentials provided")
+        res.status(403).json({
+            "message": "No Credentials Provided"
+        })
     };
 };
 

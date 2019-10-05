@@ -184,6 +184,20 @@ var changeWantedTags = (req) => new Promise((resolve, reject) => {
         })
 });
 
+var logServerError = (res, error, message = "Server Error") => {
+    console.log(message, error)
+    res.status(500).json({
+        "message": message,
+        "error": error
+    })
+};
+
+var logUserError = (res, message = "User Error", code = 400) => {
+    console.log(message)
+    res.status(code).json({
+        "message": message
+    })
+}
 
 module.exports.router = function (app, db) {
 
@@ -214,7 +228,7 @@ module.exports.router = function (app, db) {
         });
     });
 
-    //////////////////////////////////////////////////////////////////////////  USER ACCOUTNS
+    //////////////////////////////////////////////////////////////////////////  SMALL DYNAMIC REQUESTS
 
     app.get('/checkUniqueUsername', (req, res) => {
         //// requires body.username
@@ -245,6 +259,8 @@ module.exports.router = function (app, db) {
             });
         }
     });
+
+    //////////////////////////////////////////////////////////////////////////  USER ACCOUTNS
 
     app.post('/createAccount', (req, res) => {
         // requires body.{
@@ -286,10 +302,7 @@ module.exports.router = function (app, db) {
             })
             .catch((req) => {
                 console.log('User create error (', req.error.details, ')', req.error.message);
-                res.json({
-                    'message': 'Could not create user',
-                    'error': req.error
-                })
+                logServerError(res, req.error, 'User Create Error')
                 db.query(`DELETE FROM user_profile
                         WHERE userID = '${req.userData.userID}'`,
                     (error) => {
@@ -325,17 +338,12 @@ module.exports.router = function (app, db) {
                 })
                 .catch((error) => {
                     console.log('Log in error (', error.details, ')', error);
-                    res.status(500).json({
-                        'message': 'Log In failiure',
-                        'error': error
-                    })
+                    logServerError(res, error, "Login Error")
                 })
 
 
         } else {
-            res.status(403).json({
-                'message': "no credentials provided",
-            })
+            logUserError(res, "no credentials provided", 403)
         }
 
     });
@@ -345,7 +353,7 @@ module.exports.router = function (app, db) {
                 FROM user_profile
                 WHERE userID = '${req.userData.userID}' `, function (error, result) {
             if (error) {
-                throw error
+                logServerError(res, error, "Get User Error")
             } else if (result[0]) {
                 delete result[0].userID
                 res.status(200).json({
@@ -353,14 +361,12 @@ module.exports.router = function (app, db) {
                     "userProfile": result[0]
                 })
             } else {
-                res.status(404).json({
-                    "message": 'no user found'
-                })
+                logUserError(res, "No User Found", 404)
             };
 
         });
     });
-
+    /////////////////// nuke all of this
     app.get('/changeWantedTags', Auth.checkToken, (req, res) => {
         req.db = db;
         changeWantedTags(req)
@@ -379,7 +385,7 @@ module.exports.router = function (app, db) {
     });
 
     //////////////////////////////////////////////////////////////////////////  LISTINGS
-
+    //######################
     app.post('/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
         Auth.genID((idOne) => {
@@ -396,15 +402,11 @@ module.exports.router = function (app, db) {
             var authorID = req.userData.userID
 
             db.query(`INSERT INTO listing
-(listingID, authorID, title, body, mainPhoto , end_date, location)
+(listingID, authorID, title, body, mainPhoto, end_date, location)
 VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_date}','${location}')`,
                 (error) => {
                     if (error) {
-                        console.log(error)
-                        res.status(500).json({
-                            "message": 'Server Error',
-                            "error": error
-                        })
+                        logServerError(res, error)
                     } else {
                         let itemListString = ''
                         itemList.forEach((item, index) => {
@@ -418,11 +420,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
 
                         db.query(`INSERT INTO listing_item (itemID, listingID, name, description, tags, images) VALUES ${itemListString}`, (error) => {
                             if (error) {
-                                console.log('Listing Item Save Error')
-                                res.status(500).json({
-                                    "message": 'Server Error',
-                                    "error": error
-                                })
+                                logServerError(res, error, 'Listing Item Save Error')
                             } else {
                                 console.log('Listing Saved Successfully')
                                 res.json({
@@ -442,6 +440,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
 
     });
 
+    //######################
     app.get('/getListingNoAuth', (req, res) => {
         req.db = db
         getListing(req)
@@ -454,14 +453,11 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
                 })
             })
             .catch((req) => {
-                res.status(500).json({
-                    "message": 'Server Error',
-                    "error": req.error
-                })
-                console.log('Listing Fetch Error (', req.error.details, ')', req.error.message);
+                logServerError(res, error, "Listing Could not be Fetched")
             })
     });
 
+    //######################
     app.get('/getListingAuthenticated', Auth.checkToken, (req, res) => {
         req.db = db
         getListing(req)
@@ -475,10 +471,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
                 })
             })
             .catch((req) => {
-                res.status(500).json({
-                    "message": 'Server Error',
-                    "error": req.error
-                })
+                logServerError(res, req.error, "Listing Fetch Error")
                 console.log('Listing Fetch Error (', req.error.details, ')', req.error.message);
             })
     });
@@ -500,11 +493,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
             (error, results) => {
                 console.log(`(${req.body.filterTags})`)
                 if (error) {
-                    console.log('Filter listing error ', error)
-                    res.status(500).json({
-                        "message": 'Server Error',
-                        "error": req.error
-                    })
+                    logServerError(res, error, 'Filter listing error')
                 } else {
                     console.log('Filtered Results Sent Succesfully')
                     res.json({
@@ -515,6 +504,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
             })
     });
     /////////////////
+    //######################
     app.get('/getRecentListings', Auth.checkToken, (req, res) => {
         db.query(`SELECT *
     FROM listing
@@ -528,11 +518,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
     WHERE userID = '${req.userData.userID}'
     `, (error, results) => {
             if (error) {
-                console.log('Recent Listing Error ', error)
-                res.status(500).json({
-                    "message": 'Server Error',
-                    "error": error
-                })
+                logServerError(res, error, "Recent Listing Error")
             } else {
                 console.log('Recent Listings Sent Successfully')
                 res.json({
@@ -543,14 +529,12 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
         })
     });
 
+    //######################
     app.get('/getDesiredItems', (req, res) => {
         db.query(`SELECT * FROM wanted_tags`, (error, results) => {
             if (error) {
                 console.log('Get Desired Items Error: ', error)
-                res.status(500).json({
-                    "message": 'Server Error',
-                    "error": error
-                })
+                logServerError(res, error, "Desired Items Fetch Error")
             } else {
                 res.json({
                     "message": 'Desired Items Fetched Succesfully',
@@ -568,11 +552,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
 (messageID,senderID,targetID,title,body,time_sent)
 VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.title},${req.body.body},${new Date})`, (error, results) => {
                 if (error) {
-                    console.log('Message Sending Error :', error)
-                    res.status(500).json({
-                        "message": 'Server Error',
-                        "error": error
-                    })
+                    logServerError(res, error, "Send Message Error")
                 } else {
                     console.log('User Message Sent Successfully')
                     res.json({
@@ -589,11 +569,7 @@ VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.titl
     FROM message_history
     WHERE targetID = '${req.userData.userID}'`, (error, results) => {
             if (error) {
-                console.log('Message Fetch Error', error);
-                res.status(500).json({
-                    "message": 'Server Error',
-                    "error": req.error
-                })
+                logServerError(res, error, 'Message Fetch Error')
             } else if (results[0]) {
                 console.log('User Messages Fetched Successfully')
                 res.json({
@@ -601,9 +577,7 @@ VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.titl
                     "Data": results
                 })
             } else {
-                res.status(500).json({
-                    "message": 'No Messages Found'
-                })
+                logUserError(res, 'No Messages Found', 400)
             }
         })
     });

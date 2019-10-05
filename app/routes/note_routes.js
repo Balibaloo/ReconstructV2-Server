@@ -1,8 +1,7 @@
-//router funciton
-/////////////////////// ADD FUNCTION REQUIREMENTS
-const Auth = require('../helpers/auther')
-const imageHandler = require('../helpers/imageHandler')
-const GSON = require('gson')
+const Auth = require('../helpers/auther');
+const imageHandler = require('../helpers/imageHandler');
+const promiseCollection = require('../helpers/promises');
+const GSON = require('gson');
 
 //////////////////////////////////////////////////////////////////////////////  HELPER FUNCTIONS
 
@@ -37,7 +36,6 @@ var checkUniqueUsername = (db, username) => {
 
 };
 
-
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
     let finalString = '('
@@ -45,144 +43,27 @@ var arrayToSQL = (arr) => {
         if (index !== 0) {
             finalString += ' ,'
         }
-        if (item instanceof Array) {
-            finalString += `"[${item.toString()}]"`
-        } else {
-            finalString += `"${item}"`
-        }
 
+        finalString += `"${item}"`
     })
     finalString += ')'
     return finalString
 
+};
+
+var genSQLFromItemList = (listingItemList) => {
+    let itemListString = ''
+    listingItemList.forEach((item, index) => {
+        if (index !== 0) {
+            itemListString += ','
+        }
+        Auth.genID((newID) => {
+            itemListString += arrayToSQL([newID, listingID, item.name, item.description, item.tags, item.images])
+        })
+    })
 }
 
-var getListing = (req) => new Promise((resolve, reject) => {
-    //// pulls a Listing entry from databse given listingID
-    req.db.query(`SELECT *
-                FROM listing
-                WHERE listingID = '${req.body.listingID}'`, (error, results) => {
-        results = results[0]
-        if (error) {
-            req.error = error
-            req.error.details = 'select listing'
-            reject(req)
-        } else if (results) {
-            req.listing = results
-            resolve(req)
-        } else {
-            req.error = new Error('no listing found')
-            req.error.details = 'no listing found'
-            reject(req)
-        }
-
-    })
-});
-
-var getListingItems = (req) => new Promise((resolve, reject) => {
-    //// pulls every item associated with a listingID from database
-    req.db.query(`SELECT *
-                FROM listing_item
-                WHERE listingID = '${req.body.listingID}'`, (error, results) => {
-        if (error) {
-            req.error = error
-            req.error.details = 'lsiting fetch error'
-            reject(req)
-        } else if (results[0]) {
-            results.forEach((element, index) => {
-                //// converts arrays stored in text form to array objects
-                results[index].tags = element.tags.replace('[', '').replace(']', '').split(',')
-                results[index].images = element.images.replace('[', '').replace(']', '').split(',')
-            });
-
-            req.listing.itemList = results
-
-            console.log('listing items fetched successfully')
-            resolve(req)
-        } else {
-            req.error = new Error('no listing items found')
-            reject(req)
-        }
-    })
-
-});
-
-var saveViewRequest = (req) => new Promise((resolve, reject) => {
-    //// logs a view request if the authorID does not match userID
-    if (req.userData.userID != req.listing.authorID) {
-        Auth.genID((newID) => {
-            req.db.query(`INSERT INTO view_log
-                    (viewID, userID ,listingID)
-                    VALUES ('${newID}', '${req.userData.userID}', '${req.listing.listingID}')`, (error) => {
-                if (error) {
-                    req.error = error
-                    req.error.details = 'lsiting view save error'
-                    reject(req)
-                } else {
-                    resolve(req)
-                }
-            })
-        })
-    }
-});
-
-var changeWantedTags = (req) => new Promise((resolve, reject) => {
-    //// changes a users wantedTags array and global wanted tags table on tag changes
-    // needs [body.newTags]
-
-    let db = req.db
-
-    let modifyTagsPromise = ([db, array, type]) => new Promise((resolve, reject) => {
-        let num = (type == "+ 1") ? 1 : 0
-
-        array.forEach((element) => {
-            db.query(`
-                IF EXISTS(SELECT tag FROM wanted_tags WHERE tag = '${element}')
-                        UPDATE wanted_tags SET numOfPeople = numOfPeople ${type} WHERE tag = '${element}'
-                ELSE
-                    BEGIN
-                        INSERT INTO wanted_tags (tag, numOfPeople) values ('${element}', ${num})
-                    END
-                `, (error) => {
-                if (error) {
-                    reject(error)
-                } else {
-                    resolve(req)
-                }
-
-            })
-        })
-    });
-
-    db.query(`SELECT wantedTags
-            FROM user_profile
-            WHERE userID = '${req.userData.userID}'`,
-        (error, results) => {
-            if (error) {
-                req.error = error
-                reject(req)
-            } else {
-                let currentTags = results[0].wantedTags.slice(1, -1).split(',')
-                let newTags = req.body.newTags
-
-                let tagsToAdd = newTags.filter(function (el) {
-                    return currentTags.indexOf(el) == -1;
-                });
-
-                let tagsToRemove = currentTags.filter(function (el) {
-                    return newTags.indexOf(el) == -1;
-                });
-
-                modifyTagsPromise([db, tagsToRemove, "- 1"])
-                    .then(modifyTagsPromise([db, tagsToAdd, "+ 1"]))
-                    .then(resolve(req))
-                    .catch((error) => {
-                        req.error = error
-                        reject(req)
-                    })
-            }
-        })
-});
+//////########### ASSSSSIVE OVERHAUL
 
 var logServerError = (res, error, message = "Server Error") => {
     console.log(message, error)
@@ -270,27 +151,7 @@ module.exports.router = function (app, db) {
         // phone
         //}
 
-        var saveUserPromise = (req) => new Promise((resolve, reject) => {
-            req.userData = req.body
-
-            Auth.genID((userID) => {
-                req.userData.userID = userID
-                db.query(`INSERT INTO user_profile
-                        (userID, fName, lName, email, phone)
-                        VALUES ('${req.userData.userID}','${firstName}','${lastName}','${email}',${phone},[])`,
-                    (error, result) => {
-                        if (error) {
-                            req.error = error
-                            req.error.details = 'User save'
-                            reject(req)
-                        } else {
-                            resolve(req)
-                        }
-                    })
-            });
-        });
-
-        saveUserPromise(req)
+        promiseCollection.saveUserPromise(req)
             .then(Auth.clientEncode) ////////////////////////////
             .then(Auth.saveUser)
             .then(Auth.logToken)
@@ -315,18 +176,7 @@ module.exports.router = function (app, db) {
 
         if (req.headers.authorization) {
 
-            var logInPromise = (req) => new Promise((resolve, reject) => {
-                req.userData = {}
-                var authCreds = req.headers.authorization.split(' ');
-                var decodedCreds = Buffer.from(authCreds[1], 'base64').toString().split(':');
-
-                req.userData.username = decodedCreds[0]
-                req.userData.password = decodedCreds[1]
-
-                resolve(req)
-            })
-
-            logInPromise(req)
+            promiseCollection.logInPromise(req)
                 .then(Auth.clientEncode) /////////////////////////////////////
                 .then(Auth.checkUP)
                 .then(Auth.logToken)
@@ -402,23 +252,14 @@ module.exports.router = function (app, db) {
             var authorID = req.userData.userID
 
             db.query(`INSERT INTO listing
-(listingID, authorID, title, body, mainPhoto, end_date, location)
+            (listingID, authorID, title, body, mainPhoto, end_date, location)
 VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_date}','${location}')`,
                 (error) => {
                     if (error) {
                         logServerError(res, error)
                     } else {
-                        let itemListString = ''
-                        itemList.forEach((item, index) => {
-                            if (index !== 0) {
-                                itemListString += ','
-                            }
-                            Auth.genID((newID) => {
-                                itemListString += arrayToSQL([newID, listingID, item.name, item.description, item.tags, item.images])
-                            })
-                        })
 
-                        db.query(`INSERT INTO listing_item (itemID, listingID, name, description, tags, images) VALUES ${itemListString}`, (error) => {
+                        db.query(`INSERT INTO listing_item (itemID, listingID, name, description, tags, images) VALUES ${genSQLFromItemList(itemList)}`, (error) => {
                             if (error) {
                                 logServerError(res, error, 'Listing Item Save Error')
                             } else {
@@ -443,8 +284,8 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
     //######################
     app.get('/getListingNoAuth', (req, res) => {
         req.db = db
-        getListing(req)
-            .then(getListingItems)
+        promiseCollection.getListing(req)
+            .then(promiseCollection.getListingItems)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
@@ -460,9 +301,9 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
     //######################
     app.get('/getListingAuthenticated', Auth.checkToken, (req, res) => {
         req.db = db
-        getListing(req)
-            .then(getListingItems)
-            .then(saveViewRequest)
+        promiseCollection.getListing(req)
+            .then(promiseCollection.getListingItems)
+            .then(promiseCollection.saveViewRequest)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({

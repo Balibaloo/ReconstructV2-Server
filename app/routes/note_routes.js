@@ -37,19 +37,6 @@ var checkUniqueUsername = (db, username) => {
 
 };
 
-var createTagsArray = (itemList) => {
-    //// creates an array of non duplicate tags of the items in the itemList list
-    let allTags = new Set()
-
-    itemList.forEach((item) => {
-        new Set(item.tags).forEach(
-            allTags.add, allTags
-        );
-    });
-
-    return Array.from(allTags)
-
-};
 
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
@@ -81,7 +68,6 @@ var getListing = (req) => new Promise((resolve, reject) => {
             req.error.details = 'select listing'
             reject(req)
         } else if (results) {
-            results.inherited_tags = results.inherited_tags.replace('[', '').replace(']', '').split(',')
             req.listing = results
             resolve(req)
         } else {
@@ -408,11 +394,10 @@ module.exports.router = function (app, db) {
 
             var listingID = idOne
             var authorID = req.userData.userID
-            var inherited_tags = createTagsArray(itemList)
 
             db.query(`INSERT INTO listing
-(listingID, authorID, title, body, inherited_tags, mainPhoto , end_date, location)
-VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]','${mainPhoto}','${end_date}','${location}')`,
+(listingID, authorID, title, body, mainPhoto , end_date, location)
+VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_date}','${location}')`,
                 (error) => {
                     if (error) {
                         console.log(error)
@@ -509,7 +494,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','[${inherited_tags}]',
         //////////////////////////////// WIP
         db.query(`SELECT *
             FROM listing
-            WHERE inherited_tags
+            WHERE 
             LIKE
             IN `,
             (error, results) => {

@@ -1,7 +1,6 @@
 const Auth = require('../helpers/auther');
 const imageHandler = require('../helpers/imageHandler');
 const promiseCollection = require('../helpers/promises');
-const GSON = require('gson');
 
 //////////////////////////////////////////////////////////////////////////////  HELPER FUNCTIONS
 
@@ -36,35 +35,6 @@ var checkUniqueUsername = (db, username) => {
 
 };
 
-var arrayToSQL = (arr) => {
-    //// converts an array to an SQL insertable format String
-    let finalString = '('
-    arr.forEach((item, index) => {
-        if (index !== 0) {
-            finalString += ' ,'
-        }
-
-        finalString += `"${item}"`
-    })
-    finalString += ')'
-    return finalString
-
-};
-
-var genSQLFromItemList = (listingItemList) => {
-    let itemListString = ''
-    listingItemList.forEach((item, index) => {
-        if (index !== 0) {
-            itemListString += ','
-        }
-        Auth.genID((newID) => {
-            itemListString += arrayToSQL([newID, listingID, item.name, item.description, item.tags, item.images])
-        })
-    })
-}
-
-//////########### ASSSSSIVE OVERHAUL
-
 var logServerError = (res, error, message = "Server Error") => {
     console.log(message, error)
     res.status(500).json({
@@ -80,6 +50,20 @@ var logUserError = (res, message = "User Error", code = 400) => {
     })
 }
 
+var arrayToSQL = (arr) => {
+    //// converts an array to an SQL insertable format String
+    let finalString = '('
+    arr.forEach((item, index) => {
+        if (index !== 0) {
+            finalString += ' ,'
+        }
+        finalString += `"${item}"`
+    })
+    finalString += ')'
+    return finalString
+
+};
+
 module.exports.router = function (app, db) {
 
     //////////////////////////////////////////////////////////////////////////  TEST ZONE
@@ -89,9 +73,9 @@ module.exports.router = function (app, db) {
             res.send("No images given to load")
         } else {
             imageHandler.getImages(req.query.images).then((loadedImages) => {
-                    res.send(loadedImages);
-                    console.log(loadedImages)
-                })
+                res.send(loadedImages);
+                console.log(loadedImages)
+            })
                 .catch(console.log)
         }
     });
@@ -176,7 +160,7 @@ module.exports.router = function (app, db) {
 
         if (req.headers.authorization) {
 
-            promiseCollection.logInPromise(req)
+            promiseCollection.decodeIncomingUP(req)
                 .then(Auth.clientEncode) /////////////////////////////////////
                 .then(Auth.checkUP)
                 .then(Auth.logToken)
@@ -235,57 +219,37 @@ module.exports.router = function (app, db) {
     });
 
     //////////////////////////////////////////////////////////////////////////  LISTINGS
-    //######################
     app.post('/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
-        Auth.genID((idOne) => {
-            var {
-                title,
-                body,
-                end_date,
-                location,
-                itemList,
-                mainPhoto
-            } = req.body
 
-            var listingID = idOne
-            var authorID = req.userData.userID
-
-            db.query(`INSERT INTO listing
-            (listingID, authorID, title, body, mainPhoto, end_date, location)
-VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_date}','${location}')`,
-                (error) => {
-                    if (error) {
-                        logServerError(res, error)
-                    } else {
-
-                        db.query(`INSERT INTO listing_item (itemID, listingID, name, description, tags, images) VALUES ${genSQLFromItemList(itemList)}`, (error) => {
-                            if (error) {
-                                logServerError(res, error, 'Listing Item Save Error')
-                            } else {
-                                console.log('Listing Saved Successfully')
-                                res.json({
-                                    "message": 'Listing Saved Successfully',
-                                    "Data": listingID
-                                })
-                            }
-
-                        })
-                    }
-                }
-            )
-        })
-
-
-
-
+        /// need to save images sent to server, and replace them with their ids
+        //// .then(promiseCollection.insertImageIds)
+        promiseCollection.insertMainListing(req)
+            .then(promiseCollection.insertListingItems)
+            .then(promiseCollection.insertItemTags)
+            .then((req) => {
+                res.json({
+                    "message": 'Listing Saved Successfully',
+                    "Data": req.listingIDs
+                })
+            })
+            .then(console.log('Listing Saved sucsessfully'))
+            .catch((req) => {
+                logServerError(res, req.error ? req.error : req)
+                promiseCollection.deleteListing(req)
+                    .then(console.log('succesfully cleaned up'))
+                    .catch((req) => {
+                        logServerError(res, req.error, "Cleanup Error")
+                    })
+            })
     });
 
-    //######################
     app.get('/getListingNoAuth', (req, res) => {
         req.db = db
         promiseCollection.getListing(req)
             .then(promiseCollection.getListingItems)
+            .then(promiseCollection.getListingItemTags)
+            .then(promiseCollection.getListingItemImages)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
@@ -298,12 +262,15 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
             })
     });
 
-    //######################
     app.get('/getListingAuthenticated', Auth.checkToken, (req, res) => {
         req.db = db
+
+        /// need to replace image ids with loaded images
+
         promiseCollection.getListing(req)
             .then(promiseCollection.getListingItems)
-            .then(promiseCollection.saveViewRequest)
+            .then(promiseCollection.getListingItemTags)
+            .then(promiseCollection.getListingItemImages)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
@@ -317,7 +284,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
             })
     });
 
-    //////////////// construciton zone
+    //#########################################################################
     app.get('/getFrontPageListings', (req, res) => {
         ////////////////// save a view as a date, prune views older than 24 hrs
         ////////////////// return most viewed in 24 hrs
@@ -325,14 +292,10 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
     });
 
     app.get('/getFilteredListings', (req, res) => {
-        //////////////////////////////// WIP
-        db.query(`SELECT *
-            FROM listing
-            WHERE 
-            LIKE
-            IN `,
+        db.query(`SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
+            FROM listing_item_tags
+            WHERE tagID IN ${arrayToSQL(req.body.filterTags)})`,
             (error, results) => {
-                console.log(`(${req.body.filterTags})`)
                 if (error) {
                     logServerError(res, error, 'Filter listing error')
                 } else {
@@ -344,8 +307,7 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
                 }
             })
     });
-    /////////////////
-    //######################
+
     app.get('/getRecentListings', Auth.checkToken, (req, res) => {
         db.query(`SELECT *
     FROM listing
@@ -372,18 +334,21 @@ VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_
 
     //######################
     app.get('/getDesiredItems', (req, res) => {
-        db.query(`SELECT * FROM wanted_tags`, (error, results) => {
+        ///// fucken sql dont work
+        db.query(`SELECT count(tagID), tagID FROM wanted_tags
+                GROUP BY tagID
+                JOIN tags ON tags.tagID = wanted_tags.tagID`, (error, results) => {
             if (error) {
                 console.log('Get Desired Items Error: ', error)
                 logServerError(res, error, "Desired Items Fetch Error")
             } else {
                 res.json({
                     "message": 'Desired Items Fetched Succesfully',
-                    "Datat": results
+                    "Data": results
                 })
             }
         });
-    })
+    });
 
     //////////////////////////////////////////////////////////////////////////  MESAGES
 
@@ -422,9 +387,5 @@ VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.titl
             }
         })
     });
-
-
-
-
 
 };

@@ -1,0 +1,40 @@
+const Auth = require('../../helpers/auther');
+const sqlBuilder = require('sql')
+
+module.exports.routes = function (app, db) {
+    app.post('/sendMessage', Auth.checkToken, (req, res) => {
+        Auth.genID((messageID) => {
+            db.query(`INSERT INTO message_history
+(messageID,senderID,targetID,title,body,time_sent)
+VALUES (${messageID},${req.userData.userID},${req.body.targetID},${req.body.title},${req.body.body},${new Date})`, (error, results) => {
+                if (error) {
+                    logServerError(res, error, "Send Message Error")
+                } else {
+                    console.log('User Message Sent Successfully')
+                    res.json({
+                        "message": 'Message Sent'
+                    })
+                }
+            })
+        })
+
+    });
+
+    app.get('/getUserMessages', Auth.checkToken, (req, res) => {
+        db.query(`SELECT *
+    FROM message_history
+    WHERE targetID = '${req.userData.userID}'`, (error, results) => {
+            if (error) {
+                logServerError(res, error, 'Message Fetch Error')
+            } else if (results[0]) {
+                console.log('User Messages Fetched Successfully')
+                res.json({
+                    "message": 'Messages Fetched Succesfully',
+                    "Data": results
+                })
+            } else {
+                logUserError(res, 'No Messages Found', 400)
+            }
+        })
+    });
+}

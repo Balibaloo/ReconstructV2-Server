@@ -176,7 +176,7 @@ module.exports.createNewToken = (req) => new Promise((resolve, reject) => {
 
 });
 
-module.exports.chechUniqueUser = (username) => {
+module.exports.checkUniqueUser = (username) => {
     //// varifies that the username is unique
     authServer.query(`SELECT * FROM login_credentials WHERE Username = '${username}'`, (error, results) => {
         if (error) {

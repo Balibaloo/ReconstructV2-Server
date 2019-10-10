@@ -1,5 +1,7 @@
 var uniqueID = require('uniqid')
 const Auth = require('../helpers/auther');
+const sqlBuilder = require('sql')
+
 
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
@@ -25,7 +27,15 @@ var genSQLFromNestedList = (itemList) => {
             if (indexTwo !== 0) {
                 finalString += ','
             }
-            finalString += "(" + `'${IDTagPair[0]}','${IDTagPair[1]}','${IDTagPair[2]}'` + ")"
+            finalString += "("
+            IDTagPair.forEach((singleItem, singleIndex) => {
+                if (singleIndex !== 0) {
+                    finalString += ','
+                }
+                finalString += "'" + singleItem + "'"
+            })
+            finalString += ")"
+
         })
     })
 
@@ -47,16 +57,16 @@ var genSQLFromItemList = (listingItemList, listingID) => {
 
 module.exports.getListing = (req) => new Promise((resolve, reject) => {
     //// pulls a Listing entry from databse given listingID
+
     req.db.query(`SELECT *
                 FROM listing
                 WHERE listingID = '${req.body.listingID}'`, (error, results) => {
-        results = results[0]
         if (error) {
             req.error = error
             req.error.details = 'select listing'
             reject(req)
-        } else if (results) {
-            req.listing = results
+        } else if (results[0]) {
+            req.listing = results[0]
             resolve(req)
         } else {
             req.error = new Error('no listing found')
@@ -256,12 +266,16 @@ module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     })
 })
 
+////###################################################
+module.exports.saveImage_ReplacebyID = (req) => new Promise((resolve, reject) => {
+    db = req.db
+    itemList = req.body.itemList
+})
+
 module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
-    //// needs image fields to be replaced with the ids of those images
     db = req.db
     itemList = req.body.itemList
 
-    //// sketchy, verify
     itemList = itemList.map((item) => {
         return item.images.map((image) => {
             return [image, item.itemID]
@@ -290,4 +304,9 @@ module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
             resolve(req)
         }
     })
+})
+
+module.exports.changeWantedTags = (req) => new Promise((resolve, reject) => {
+    // find which tags to add and which to remove
+    resolve(req)
 })

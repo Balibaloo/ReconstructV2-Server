@@ -1,7 +1,8 @@
 const Auth = require('../../helpers/auther');
 const promiseCollection = require('../../helpers/promises');
-const customErrorLogger = require('../../helpers/CustomErrors')
-const sqlBuilder = require('sql')
+const customErrorLogger = require('../../helpers/CustomErrors');
+const emails = require('../../helpers/Emails');
+const sqlBuilder = require('sql');
 
 var checkUniqueEmail = (db, Email) => {
     //// checks if an email adress is already saved in the databse
@@ -43,6 +44,7 @@ module.exports.routes = function (app, db) {
         // phone
         //}
 
+        req.db = db
         promiseCollection.saveUserPromise(req)
             .then(Auth.clientEncode) ////////////////////////////
             .then(Auth.saveUser)
@@ -52,7 +54,7 @@ module.exports.routes = function (app, db) {
                     'message': 'User Created',
                     'userToken': req.userData.userToken
                 })
-            })
+            }).then(emails.sendAccountVerification)
             .catch((req) => {
                 console.log('User create error (', req.error.details, ')', req.error.message);
                 customErrorLogger.logServerError(res, req.error, 'User Create Error')

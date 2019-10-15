@@ -104,8 +104,8 @@ module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
         return item.listingItemID
     })
 
-    req.db.query(`SELECT tagID,listingItemID 
-        FROM listing_item_tags 
+    req.db.query(`SELECT tagID,listingItemID
+        FROM listing_item_tags
         WHERE listingItemID IN ${arrayToSQL(listingTagArray)}`,
         (error, results) => {
             if (error) {
@@ -163,7 +163,7 @@ module.exports.saveUserPromise = (req) => new Promise((resolve, reject) => {
 
     Auth.genID((userID) => {
         req.userData.userID = userID
-        db.query(`INSERT INTO user_profile
+        req.db.query(`INSERT INTO user_profile
                 (userID, fName, lName, email, phone)
                 VALUES ('${req.userData.userID}','${firstName}','${lastName}','${email}',${phone},[])`,
             (error, result) => {

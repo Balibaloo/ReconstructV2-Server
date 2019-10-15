@@ -1,4 +1,4 @@
-const Auth = require('../../helpers/auther');
+const Auth = require('../../helpers/AuthenticationHelper');
 
 module.exports.routes = function (app, db) {
     app.get('//', Auth.checkToken, (req, res) => {

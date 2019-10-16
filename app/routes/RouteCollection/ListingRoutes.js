@@ -1,6 +1,6 @@
 const customErrorLogger = require('../../helpers/CustomErrors')
 const promiseCollection = require('../../helpers/promises');
-const Auth = require('../../helpers/auther');
+const Auth = require('../../helpers/AuthenticationHelper');
 const sqlBuilder = require('sql')
 
 var arrayToSQL = (arr) => {

@@ -1,5 +1,5 @@
 var uniqueID = require('uniqid')
-const Auth = require('../helpers/auther');
+const Auth = require('../helpers/AuthenticationHelper');
 const sqlBuilder = require('sql')
 
 
@@ -308,5 +308,9 @@ module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
 
 module.exports.changeWantedTags = (req) => new Promise((resolve, reject) => {
     // find which tags to add and which to remove
+    resolve(req)
+})
+
+module.exports.setEmailVerified = (req) => new Promise((resolve, reject) => {
     resolve(req)
 })

@@ -1,4 +1,5 @@
 const Auth = require('../../helpers/AuthenticationHelper');
+const emails = require('../../helpers/Emails')
 
 module.exports.routes = function (app, db) {
     app.get('//', Auth.checkToken, (req, res) => {
@@ -15,5 +16,12 @@ module.exports.routes = function (app, db) {
         });
     });
 
+    app.get('/secret', Auth.checkToken, (req, res) => {
+        req.db = db
+        emails.sendAccountVerification(req)
+            .then(res.json({
+                "message": "Veriffication Email Sent!"
+            }))
+    })
 
 }

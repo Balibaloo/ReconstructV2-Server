@@ -1,4 +1,4 @@
-const Auth = require('../../helpers/auther');
+const Auth = require('../../helpers/AuthenticationHelper');
 const promiseCollection = require('../../helpers/promises');
 const customErrorLogger = require('../../helpers/CustomErrors');
 const emails = require('../../helpers/Emails');
@@ -49,6 +49,7 @@ module.exports.routes = function (app, db) {
             .then(Auth.clientEncode) ////////////////////////////
             .then(Auth.saveUser)
             .then(Auth.logToken)
+            .then(emails.sendAccountVerification)
             .then((req) => {
                 res.json({
                     'message': 'User Created',

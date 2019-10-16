@@ -189,6 +189,12 @@ module.exports.checkUniqueUser = (username) => {
     })
 };
 
+module.exports.saveEmailVerificationCode = (code) => new Promise((resolve, reject) => {
+    console.log("saved verrification code ig")
+    resolve()
+    /// insert into
+});
+
 module.exports.genID = (callback) => {
     //// callback that generates new ID
     callback(uniqueID())

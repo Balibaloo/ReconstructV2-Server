@@ -1,4 +1,4 @@
-const Auth = require('../../helpers/auther');
+const Auth = require('../../helpers/AuthenticationHelper');
 const sqlBuilder = require('sql')
 
 module.exports.routes = function (app, db) {

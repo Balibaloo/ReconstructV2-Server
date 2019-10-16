@@ -9,18 +9,20 @@ var buildUrl = (systemIPandPort, verifficationId, username) => {
     return 'https://' + systemIPandPort + '/verifyEmail?verification=' + verifficationId.toString() + "&username=" + username
 }
 
-var getEmail = (db, userId) => {
+var getEmail = (db, userId) => new Promise((resolve, reject) => {
     db.query(`SELECT email FROM user_profile WHERE userID = '${userId}'`, (error, results) => {
         if (error) {
-        } if (results[0]) { return results[0].email }
+        } if (results[0]) {
+            resolve(results[0].email)
+        }
         else { console.log('elseessse') }
     })
-}
+})
 
 module.exports.sendAccountVerification = async (req) => {
     userEmail = await getEmail(req.db, req.userData.userID)
-    username = 'romankubiv101'
-    ////// fucken mess, fix getting email and username, figure out async
+    username = await Auth.getUsername(req.userData.userID)
+
     var verifID = crypto.randomBytes(20).toString('hex');
     var verifficationLink = buildUrl("82.3.163.116:1234", verifID, username)
 
@@ -37,7 +39,7 @@ module.exports.sendAccountVerification = async (req) => {
         to: userEmail, // list of receivers
         subject: 'Please verrify your email', // Subject line
         text: 'Hi,\n please click on the link bellow to verify your email \n\n' + verifficationLink, // plain text body
-        html: '<b>Hello world?</b>' // html body
+        html: '<b>Hi,<br> please click on the link bellow to verify your email <br><br>' + verifficationLink + '</b>' // html body
     }
 
     Auth.saveEmailVerificationCode(verifID)
@@ -47,8 +49,6 @@ module.exports.sendAccountVerification = async (req) => {
             return req
         })
         .catch(console.log)
-
-    // send email here
 
 };
 

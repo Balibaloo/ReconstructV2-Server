@@ -22,6 +22,13 @@ module.exports.routes = function (app, db) {
             .then(res.json({
                 "message": "Veriffication Email Sent!"
             }))
+            .catch((err) => {
+                console.log(err)
+                // res.json({
+                //     "message": "Error",
+                //     "error": err
+                // })
+            })
     })
 
 }

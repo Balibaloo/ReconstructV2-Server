@@ -195,6 +195,16 @@ module.exports.saveEmailVerificationCode = (code) => new Promise((resolve, rejec
     /// insert into
 });
 
+module.exports.getUsername = (userID) => new Promise((resolve, reject) => {
+    authServer.query(`SELECT username FROM login_credentials WHERE userID = '${userID}'`, (error, results) => {
+        if (error) {
+        } if (results[0]) {
+            resolve(results[0].username)
+        }
+        else { }
+    });
+});
+
 module.exports.genID = (callback) => {
     //// callback that generates new ID
     callback(uniqueID())

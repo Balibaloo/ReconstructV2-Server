@@ -312,5 +312,12 @@ module.exports.changeWantedTags = (req) => new Promise((resolve, reject) => {
 })
 
 module.exports.setEmailVerified = (req) => new Promise((resolve, reject) => {
-    resolve(req)
+    userID = req.userData.userID
+
+    let sql = 'UPDATE user_profile SET emailValid = 1 WHERE userID = ?'
+    req.db.query(sql, userID, (err) => {
+        if (err) { reject(err) }
+        else { resolve(req) }
+
+    })
 })

@@ -19,6 +19,7 @@ var getEmail = (db, userId) => new Promise((resolve, reject) => {
     })
 })
 
+
 module.exports.sendAccountVerification = async (req) => {
     userEmail = await getEmail(req.db, req.userData.userID)
     username = await Auth.getUsername(req.userData.userID)
@@ -42,7 +43,7 @@ module.exports.sendAccountVerification = async (req) => {
         html: '<b>Hi,<br> please click on the link bellow to verify your email <br><br>' + verifficationLink + '</b>' // html body
     }
 
-    Auth.saveEmailVerificationCode(verifID)
+    Auth.saveEmailVerificationCode(verifID, req.userData.userID)
         .then(transporter.sendMail(emailDetails))
         .then((req) => {
             console.log('verrification code send succesfully')
@@ -52,9 +53,4 @@ module.exports.sendAccountVerification = async (req) => {
 
 };
 
-module.exports.verifyEmail = (req) => new Promise((resolve, reject) => {
-    promises.setEmailVerified(req)
-    //https://MYURL/verifyEmail?
-    //verification=CONFIRMATIONCODE
-    //&username=USERNAME
-});
+

@@ -23,7 +23,6 @@ module.exports.routes = function (app, db) {
         req.db = db;
 
         /// need to save images sent to server, and replace them with their ids
-        //// .then(promiseCollection.insertImageIds)
         promiseCollection.insertMainListing(req)
             .then(promiseCollection.insertListingItems)
             .then(promiseCollection.insertImageIds)
@@ -93,6 +92,8 @@ module.exports.routes = function (app, db) {
     });
 
     app.get('/getFilteredListings', (req, res) => {
+        searchStringArr = req.body.searchString.split(" ")
+
         db.query(`SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
             FROM listing_item_tags
             WHERE tagID IN ${arrayToSQL(req.body.filterTags)})`,

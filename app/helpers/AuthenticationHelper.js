@@ -189,11 +189,42 @@ module.exports.checkUniqueUser = (username) => {
     })
 };
 
-module.exports.saveEmailVerificationCode = (code) => new Promise((resolve, reject) => {
-    console.log("saved verrification code ig")
-    resolve()
-    /// insert into
+module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolve, reject) => {
+    let sql = 'INSERT INTO emailverification (userID,verificationID) VALUES(?,?)'
+    authServer.query(sql, [userID, code], (error, results) => {
+        if (error) {
+            reject(error)
+        }
+        else {
+            resolve()
+        }
+    })
+
 });
+
+module.exports.verifyEmailVerificationCode = (req) => new Promise((resolve, reject) => {
+    req.userData = {}
+    req.userData.username = req.query.username
+    verificationCode = req.query.verification
+
+    let sql = `SELECT userID, username FROM login_credentials 
+                WHERE username = ? AND useriD IN 
+                (SELECT userID FROM emailverification WHERE verificationID = ?)`
+
+    authServer.query(sql, [req.userData.username, verificationCode], (error, results) => {
+        if (error) {
+            reject(error)
+
+        } else if (results) {
+            req.userData.userID = results[0].userID
+            resolve(req)
+
+        } else { reject(Error('Code does not exist')) }
+    })
+
+
+
+})
 
 module.exports.getUsername = (userID) => new Promise((resolve, reject) => {
     authServer.query(`SELECT username FROM login_credentials WHERE userID = '${userID}'`, (error, results) => {

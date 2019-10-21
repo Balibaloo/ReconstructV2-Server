@@ -5,14 +5,13 @@ const sqlBuilder = require('sql')
 
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
-    let finalString = '('
+    finalString = ""
     arr.forEach((item, index) => {
         if (index !== 0) {
             finalString += ' ,'
         }
-        finalString += `"${item}"`
+        finalString += `'${item}'`
     })
-    finalString += ')'
     return finalString
 
 };
@@ -44,10 +43,12 @@ module.exports.routes = function (app, db) {
     app.post('/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
 
+        promiseCollection.insertNewTags(req)
         /// need to save images sent to server, and replace them with their ids
         promiseCollection.insertMainListing(req)
             .then(promiseCollection.insertListingItems)
             .then(promiseCollection.insertImageIds)
+            .then(promiseCollection.insertNewTags)
             .then(promiseCollection.insertItemTags)
             .then((req) => {
                 res.json({
@@ -140,15 +141,18 @@ module.exports.routes = function (app, db) {
     });
 
     app.get('/getFilteredListings', (req, res) => {
-        searchStringArr = req.body.searchString.split(" ")
+        const listingsPerPage = 10
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
 
+        searchStringArr = req.body.searchString.split(" ")
         searchStringArr = pruneNonTagsfrom(searchStringArr)
 
         let sql = `SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
             FROM listing_item_tags
-            WHERE tagID IN ?) ORDER BY isActive DESC`
+            WHERE tagID 
+            IN (SELECT tagID FROM tags WHERE tagName IN (${arrayToSQL(searchStringArr)}))) ORDER BY isActive DESC LIMIT ?, ?`
 
-        db.query(sql, arrayToSQL(searchStringArr),
+        db.query(sql, [pageOffset, listingsPerPage],
             (error, results) => {
                 if (error) {
                     customErrorLogger.logServerError(res, error, 'Filter listing error')
@@ -187,16 +191,16 @@ module.exports.routes = function (app, db) {
         })
     });
 
-    //######################
     app.get('/getDesiredItems', (req, res) => {
-        ///// fucken sql dont work
-        db.query(`SELECT count(tagID), tagID FROM wanted_tags
+        db.query(`SELECT * FROM tags
+                JOIN (SELECT count(userID), tagID FROM wanted_tags
                 GROUP BY tagID
-                JOIN tags ON tags.tagID = wanted_tags.tagID`, (error, results) => {
+                ORDER BY count(userID)) AS wantedTags ON tags.tagID = wantedTags.tagID`, (error, results) => {
             if (error) {
                 console.log('Get Desired Items Error: ', error)
                 customErrorLogger.logServerError(res, error, "Desired Items Fetch Error")
             } else {
+                console.log("Desired Items Fetched Succesfully")
                 res.json({
                     "message": 'Desired Items Fetched Succesfully',
                     "Data": results

@@ -115,39 +115,37 @@ module.exports.getListingItems = (req) => new Promise((resolve, reject) => {
 
 module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
 
-    listingTagArray = req.listing.itemList.map((item) => {
-        return item.listingItemID
-    })
-
-    req.db.query(`SELECT tagID,listingItemID
+    let sql = `SELECT * FROM tags
+    JOIN (SELECT tagID,listingItemID
         FROM listing_item_tags
-        WHERE listingItemID IN ${arrayToSQL(listingTagArray)}`,
-        (error, results) => {
-            if (error) {
-                req.error = error
-                req.error.details = 'listing Tag fetch error'
-                reject(req)
-            } else if (results[0]) {
+        WHERE listingID  = ?) AS itemFilteredTags
+    ON tags.tagID = itemFilteredTags.tagID`
 
-                req.listing.itemList = req.listing.itemList.map((item) => {
-                    item.tagList = []
+    req.db.query(sql, req.listing.listingID, (error, results) => {
+        if (error) {
+            req.error = error
+            req.error.details = 'listing Tag fetch error'
+            reject(req)
+        } else if (results[0]) {
+            //matches tagIds to listings using listing item id
 
-                    results.filter((tagIDpair) => {
-                        if (tagIDpair.listingItemID == item.listingItemID) {
-                            item.tagList.push(tagIDpair.tagID)
-                            return false
-                        } else { return true }
-                    })
-                    return item
+            req.listing.itemList = req.listing.itemList.map((item) => {
+                item.tagList = []
+                results.filter((tagIDpair) => {
+                    if (tagIDpair.listingItemID == item.listingItemID) {
+                        item.tagList.push(tagIDpair.tagName)
+                        return false
+                    } else { return true }
                 })
-
-                console.log("Fetched Listing Item Tags")
-                resolve(req)
-            } else {
-                req.error = new Error('no listing tags found')
-                reject(req)
-            }
-        })
+                return item
+            })
+            console.log("Fetched Listing Item Tags")
+            resolve(req)
+        } else {
+            req.error = new Error('no listing tags found')
+            reject(req)
+        }
+    })
 });
 
 //#################################################################################
@@ -264,6 +262,27 @@ module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
         }
     })
 })
+
+////////////////////////////////
+module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
+    itemList = req.body.itemList
+
+    let tagSet = new Set();
+
+    itemList.forEach((item) => {
+        item.tags.forEach((tag) => {
+            tagSet.add(tag)
+        })
+    })
+
+    let tagArr = Array.from(tagSet)
+    // if tag doesent exist, isert it
+    let sql = 'INSERT INTO tags'
+
+    req.db.query()
+})
+
+
 
 module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     itemList = req.body.itemList

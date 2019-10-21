@@ -192,10 +192,16 @@ module.exports.routes = function (app, db) {
     });
 
     app.get('/getDesiredItems', (req, res) => {
-        db.query(`SELECT * FROM tags
-                JOIN (SELECT count(userID), tagID FROM wanted_tags
-                GROUP BY tagID
-                ORDER BY count(userID)) AS wantedTags ON tags.tagID = wantedTags.tagID`, (error, results) => {
+        const listingsPerPage = 10
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
+
+        let sql = `SELECT * FROM tags
+        JOIN (SELECT count(userID), tagID FROM wanted_tags
+        GROUP BY tagID
+        ORDER BY count(userID)) AS wantedTags ON tags.tagID = wantedTags.tagID
+        LIMIT ?, ?`
+
+        db.query(sql, [pageOffset, listingsPerPage], (error, results) => {
             if (error) {
                 console.log('Get Desired Items Error: ', error)
                 customErrorLogger.logServerError(res, error, "Desired Items Fetch Error")

@@ -48,19 +48,17 @@ module.exports.routes = function (app, db) {
         promiseCollection.saveUserPromise(req)
             .then(Auth.clientEncode) ////////////////////////////
             .then(Auth.saveUser)
-            .then(Auth.logToken)
+            .then(Auth.createNewToken)
             .then(emails.sendAccountVerification)
             .then((req) => {
                 res.json({
                     'message': 'User Created',
                     'userToken': req.userData.userToken
                 })
-            }).then(emails.sendAccountVerification)
-            .catch((req) => {
-                console.log('User create error (', req.error.details, ')', req.error.message);
+            }).catch((req) => {
+                //console.log('User create error (', req.error.details, ')', req.error.message);
                 customErrorLogger.logServerError(res, req.error, 'User Create Error')
-                db.query(`DELETE FROM user_profile
-                        WHERE userID = '${req.userData.userID}'`,
+                db.query(`DELETE FROM user_profile WHERE userID = '${req.userData.userID}'`,
                     (error) => {
                         console.log('User Clean up Success')
                     })

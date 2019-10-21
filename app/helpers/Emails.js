@@ -12,15 +12,16 @@ var buildUrl = (systemIPandPort, verifficationId, username) => {
 var getEmail = (db, userId) => new Promise((resolve, reject) => {
     db.query(`SELECT email FROM user_profile WHERE userID = '${userId}'`, (error, results) => {
         if (error) {
-        } if (results[0]) {
+            reject(error)
+        } else if (results[0]) {
             resolve(results[0].email)
-        }
-        else { console.log('elseessse') }
+        } else { }
     })
 })
 
 
 module.exports.sendAccountVerification = async (req) => {
+    let testVar = req
     userEmail = await getEmail(req.db, req.userData.userID)
     username = await Auth.getUsername(req.userData.userID)
 
@@ -43,13 +44,13 @@ module.exports.sendAccountVerification = async (req) => {
         html: '<b>Hi,<br> please click on the link bellow to verify your email <br><br>' + verifficationLink + '</b>' // html body
     }
 
-    Auth.saveEmailVerificationCode(verifID, req.userData.userID)
+    await Auth.saveEmailVerificationCode(verifID, req.userData.userID)
         .then(transporter.sendMail(emailDetails))
-        .then((req) => {
-            console.log('verrification code send succesfully')
-            return req
-        })
-        .catch(console.log)
+        .then(() => {
+            console.log('verrification code sent succesfully')
+        }).catch()
+
+    return testVar
 
 };
 

@@ -55,6 +55,17 @@ var genSQLFromItemList = (listingItemList, listingID) => {
     return itemListString
 }
 
+var getSQLDateTime = ([year, month, day, hour, minute = 0, second = 0]) => {
+    return new Date(year, month - 1, day, hour + 1, minute, second).toISOString().replace("T", " ").split('.')[0]
+}
+
+var SQLDateTimetoArr = (dateTime) => {
+    dateTime = dateTime.toISOString().split("T")
+    dateTime[0] = dateTime[0].split("-")
+    dateTime[1] = dateTime[1].split(".")[0].split(":")
+    return [].concat(dateTime[0], dateTime[1])
+}
+
 module.exports.getListing = (req) => new Promise((resolve, reject) => {
     //// pulls a Listing entry from databse given listingID
 
@@ -67,6 +78,9 @@ module.exports.getListing = (req) => new Promise((resolve, reject) => {
             reject(req)
         } else if (results[0]) {
             req.listing = results[0]
+            req.listing.post_date = SQLDateTimetoArr(req.listing.post_date)
+            req.listing.end_date = SQLDateTimetoArr(req.listing.end_date)
+            console.log("Fetched Main Listing")
             resolve(req)
         } else {
             req.error = new Error('no listing found')
@@ -89,6 +103,7 @@ module.exports.getListingItems = (req) => new Promise((resolve, reject) => {
             reject(req)
         } else if (results[0]) {
             req.listing.itemList = results
+            console.log("Fetched Listing Items")
             resolve(req)
         } else {
             req.error = new Error('no listing items found')
@@ -126,6 +141,7 @@ module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
                     return item
                 })
 
+                console.log("Fetched Listing Item Tags")
                 resolve(req)
             } else {
                 req.error = new Error('no listing tags found')
@@ -136,6 +152,7 @@ module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
 
 //#################################################################################
 module.exports.getListingItemImages = (req) => new Promise((resolve, reject) => {
+    console.log("Fetched Listing Item Images")
     resolve(req)
 });
 
@@ -151,27 +168,28 @@ module.exports.saveViewRequest = (req) => new Promise((resolve, reject) => {
                     req.error.details = 'lsiting view save error'
                     reject(req)
                 } else {
+                    console.log("View Succesfully loged")
                     resolve(req)
                 }
             })
         })
-    }
+    } else { resolve(req) }
 });
 
 module.exports.saveUserPromise = (req) => new Promise((resolve, reject) => {
     req.userData = req.body
-
     Auth.genID((userID) => {
         req.userData.userID = userID
         req.db.query(`INSERT INTO user_profile
                 (userID, fName, lName, email, phone)
-                VALUES ('${req.userData.userID}','${firstName}','${lastName}','${email}',${phone},[])`,
+                VALUES ('${req.userData.userID}','${req.userData.firstName}','${req.userData.lastName}','${req.userData.email}',${req.userData.phone})`,
             (error, result) => {
                 if (error) {
                     req.error = error
                     req.error.details = 'User save'
                     reject(req)
                 } else {
+                    console.log('main User Saved')
                     resolve(req)
                 }
             })
@@ -202,6 +220,7 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
 
         var listingID = idOne
         var authorID = req.userData.userID
+        end_date = getSQLDateTime(end_date)
 
         req.listingID = listingID
 

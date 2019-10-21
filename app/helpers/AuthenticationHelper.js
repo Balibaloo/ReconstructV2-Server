@@ -130,7 +130,7 @@ module.exports.saveUser = (req) => new Promise((resolve, reject) => {
                             reject(req);
 
                         } else {
-                            console.log("new user saved")
+                            console.log("new user auth saved")
                             resolve(req)
                         }
                     })
@@ -153,25 +153,29 @@ module.exports.createNewToken = (req) => new Promise((resolve, reject) => {
             result = result[0]
         };
 
-        //ISSUE result returns truthly even when no entries exist
-
         if (result) {
             req.userData.userToken = result['Token']
             // dont give the user their token back, destroy all active tokens
             resolve(req)
         } else {
             this.genID((newToken) => {
+                req.userData.userToken = newToken
                 authServer.query(`INSERT INTO alltokens
-            (Token, isValid, userID, DateCreated)
-            VALUES ('${newToken}', 1,'${req.userData.userID}', '${Date.now()}')`, () => {
-                    console.log("new token registred")
-                    req.userData.userToken = newToken
-                    resolve(req)
-                })
+            (Token, isValid, userID)
+            VALUES ('${req.userData.userToken}', 1,'${req.userData.userID}')`, (error) => {
+                    if (error) {
+                        req.error = error
+                        req.error.details = 'inserting new token'
+                        reject(req)
+                    } else {
+                        console.log("new token registred")
+                        req.userData.userToken = newToken
+                        resolve(req)
+                    }
+                }
+                )
             })
-
-        };
-
+        }
     });
 
 });

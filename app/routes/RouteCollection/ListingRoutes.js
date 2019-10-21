@@ -17,6 +17,28 @@ var arrayToSQL = (arr) => {
 
 };
 
+var pruneNonTagsfrom = (tagList) => {
+    const tagsToFilter = []
+    tagList = tagList.filter((value) => {
+        if (value in tagsToFilter) {
+            return false
+        } else return true
+    })
+    return tagList
+}
+
+var getSQLPageOffset = (itemsPerPage, pageNumber) => {
+    if (!pageNumber || !Number.isInteger(pageNumber)) {
+        pageOffset = 1
+    } else {
+        pageOffset = pageNumber
+    }
+
+    return (pageOffset - 1) * itemsPerPage
+
+}
+
+
 module.exports.routes = function (app, db) {
 
     app.post('/createListing', Auth.checkToken, (req, res) => {
@@ -30,7 +52,7 @@ module.exports.routes = function (app, db) {
             .then((req) => {
                 res.json({
                     "message": 'Listing Saved Successfully',
-                    "Data": req.listingIDs
+                    "Data": req.listingID
                 })
             })
             .then(console.log('Listing Saved sucsessfully'))
@@ -71,6 +93,7 @@ module.exports.routes = function (app, db) {
             .then(promiseCollection.getListingItems)
             .then(promiseCollection.getListingItemTags)
             .then(promiseCollection.getListingItemImages)
+            .then(promiseCollection.saveViewRequest)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
@@ -80,23 +103,52 @@ module.exports.routes = function (app, db) {
             })
             .catch((req) => {
                 customErrorLogger.logServerError(res, req.error, "Listing Fetch Error")
-                console.log('Listing Fetch Error (', req.error.details, ')', req.error.message);
             })
     });
 
-    //#########################################################################
     app.get('/getFrontPageListings', (req, res) => {
-        ////////////////// save a view as a date, prune views older than 24 hrs
-        ////////////////// return most viewed in 24 hrs
+        // checks if user has provided an integer page number to load
+        const listingsPerPage = 10
+
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
+
+        let sql = `SELECT * 
+                FROM listing 
+                JOIN (SELECT view_log.listingID, COUNT(view_log.viewID) AS numOfViews
+                    FROM dataserver.view_log 
+                    WHERE isRecent = 1 
+                    GROUP BY view_log.listingID)
+                AS topNumListings 
+                ON listing.listingID = topNumListings.listingID
+                ORDER BY numOfViews DESC
+                LIMIT ?, ?
+                `
+
+        db.query(sql, [pageOffset, listingsPerPage], (error, results) => {
+            if (error) {
+                customErrorLogger.logServerError(res, error, error.message)
+            } else if (results[0]) {
+                res.json({
+                    'message': "Fetched Succefully",
+                    'data': results
+                })
+            } else {
+                customErrorLogger.logServerError(res, new Error('No Entries Exist'))
+            }
+        })
 
     });
 
     app.get('/getFilteredListings', (req, res) => {
         searchStringArr = req.body.searchString.split(" ")
 
-        db.query(`SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
+        searchStringArr = pruneNonTagsfrom(searchStringArr)
+
+        let sql = `SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
             FROM listing_item_tags
-            WHERE tagID IN ${arrayToSQL(req.body.filterTags)})`,
+            WHERE tagID IN ?) ORDER BY isActive DESC`
+
+        db.query(sql, arrayToSQL(searchStringArr),
             (error, results) => {
                 if (error) {
                     customErrorLogger.logServerError(res, error, 'Filter listing error')
@@ -111,17 +163,18 @@ module.exports.routes = function (app, db) {
     });
 
     app.get('/getRecentListings', Auth.checkToken, (req, res) => {
-        db.query(`SELECT *
-    FROM listing
-    RIGHT JOIN
-    (SELECT *
-        FROM view_log
-        ORDER BY view_date DESC
-        LIMIT 10
-        ) AS top10
-    ON listing.listingID = top10.listingID
-    WHERE userID = '${req.userData.userID}'
-    `, (error, results) => {
+        let sql = `SELECT *
+        FROM listing
+        RIGHT JOIN
+        (SELECT *
+            FROM view_log
+            ORDER BY view_date DESC
+            LIMIT 10
+            ) AS top10
+        ON listing.listingID = top10.listingID
+        WHERE userID = ?`
+
+        db.query(sql, req.userData.userID, (error, results) => {
             if (error) {
                 customErrorLogger.logServerError(res, error, "Recent Listing Error")
             } else {

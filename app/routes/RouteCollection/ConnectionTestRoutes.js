@@ -1,6 +1,7 @@
 const Auth = require('../../helpers/AuthenticationHelper');
 const emails = require('../../helpers/Emails')
 
+
 module.exports.routes = function (app, db) {
     app.get('//', Auth.checkToken, (req, res) => {
         console.log('Auth test request received')
@@ -16,19 +17,8 @@ module.exports.routes = function (app, db) {
         });
     });
 
-    app.get('/secret', Auth.checkToken, (req, res) => {
-        req.db = db
-        emails.sendAccountVerification(req)
-            .then(res.json({
-                "message": "Veriffication Email Sent!"
-            }))
-            .catch((err) => {
-                console.log(err)
-                // res.json({
-                //     "message": "Error",
-                //     "error": err
-                // })
-            })
+    app.get('/date', (req, res) => {
+        console.log(SQLDateTimetoArr('2019-10-20T10:11:44.000Z'))
     })
 
 }

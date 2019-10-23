@@ -39,7 +39,7 @@ module.exports.routes = function (app, db) {
     app.post('/createAccount', (req, res) => {
         // requires body.{
         // username, password String
-        // firstName , lastName
+        // first_name , last_name
         // email
         // phone
         //}
@@ -110,7 +110,7 @@ module.exports.routes = function (app, db) {
         });
     });
 
-    app.get('/changeWantedTags', Auth.checkToken, (req, res) => {
+    app.get('/auth/changeWantedTags', Auth.checkToken, (req, res) => {
         req.db = db;
         promiseCollection.changeWantedTags(req)
             .then((req) => {

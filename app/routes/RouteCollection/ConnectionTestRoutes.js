@@ -1,5 +1,6 @@
 const Auth = require('../../helpers/AuthenticationHelper');
 const emails = require('../../helpers/Emails')
+const promises = require('../../helpers/promises')
 
 
 module.exports.routes = function (app, db) {
@@ -18,7 +19,8 @@ module.exports.routes = function (app, db) {
     });
 
     app.get('/date', (req, res) => {
-        console.log(SQLDateTimetoArr('2019-10-20T10:11:44.000Z'))
+        req.db = db
+        promises.insertNewTags(req)
     })
 
 }

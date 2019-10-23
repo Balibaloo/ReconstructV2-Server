@@ -31,7 +31,7 @@ VALUES ('${messageID}','${req.userData.userID}','${req.body.targetID}','${req.bo
                 console.log('User Messages Fetched Successfully')
                 res.json({
                     "message": 'Messages Fetched Succesfully',
-                    "Data": results
+                    "body": results
                 })
             } else {
                 customErrors.logUserError(res, 'No Messages Found', 400)

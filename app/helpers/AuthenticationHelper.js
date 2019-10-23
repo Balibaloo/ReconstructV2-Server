@@ -16,6 +16,7 @@ var authServer = mysql.createConnection({
 
 module.exports.checkToken = (req, res, next) => {
     //// middleware that checks if the token provided with a request is valid
+    console.log('Checking Token')
     if (req.headers.authorization) {
         var authCreds = req.headers.authorization.split(' ');
 

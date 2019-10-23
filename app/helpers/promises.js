@@ -78,8 +78,7 @@ module.exports.getListing = (req) => new Promise((resolve, reject) => {
             reject(req)
         } else if (results[0]) {
             req.listing = results[0]
-            req.listing.post_date = SQLDateTimetoArr(req.listing.post_date)
-            req.listing.end_date = SQLDateTimetoArr(req.listing.end_date)
+            req.listing.isActive = req.listing.isActive == 1 ? true : false
             console.log("Fetched Main Listing")
             resolve(req)
         } else {
@@ -180,7 +179,7 @@ module.exports.saveUserPromise = (req) => new Promise((resolve, reject) => {
         req.userData.userID = userID
         req.db.query(`INSERT INTO user_profile
                 (userID, fName, lName, email, phone)
-                VALUES ('${req.userData.userID}','${req.userData.firstName}','${req.userData.lastName}','${req.userData.email}',${req.userData.phone})`,
+                VALUES ('${req.userData.userID}','${req.userData.first_name}','${req.userData.last_name}','${req.userData.email}',${req.userData.phone})`,
             (error, result) => {
                 if (error) {
                     req.error = error
@@ -218,7 +217,6 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
 
         var listingID = idOne
         var authorID = req.userData.userID
-        end_date = getSQLDateTime(end_date)
 
         req.listingID = listingID
 
@@ -241,7 +239,7 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
 module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
     db = req.db
     listingID = req.listingID
-    itemList = req.body.itemList
+    itemList = req.body.item_list
 
     itemList.map((item) => {
         Auth.genID((newID) => {
@@ -250,7 +248,7 @@ module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
         })
     })
 
-    req.body.itemList = itemList //// saves itemlist with item ids for other functions
+    req.body.item_list = itemList //// saves itemlist with item ids for other functions
 
     db.query(`INSERT INTO listing_item (listingItemID, listingID, name, description) VALUES ${genSQLFromItemList(itemList, listingID)}`, (error) => {
         if (error) {
@@ -265,7 +263,7 @@ module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
 
 ////////////////////////////////
 module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
-    itemList = req.body.itemList
+    itemList = req.body.item_list
 
     let tagSet = new Set();
 
@@ -277,15 +275,20 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
 
     let tagArr = Array.from(tagSet)
     // if tag doesent exist, isert it
-    let sql = 'INSERT INTO tags'
+    let sql = `INSERT IGNORE INTRO tags VALUES(?)`
 
-    req.db.query()
+    req.db.query(sql, tagArr, (error, result) => {
+        if (error) {
+            console.log(error)
+        } else {
+            console.log(result)
+        }
+    })
 })
 
 
-
 module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
-    itemList = req.body.itemList
+    itemList = req.body.item_list
 
     itemList = itemList.map((item) => {
         return item.tags.map((tag) => {
@@ -307,12 +310,12 @@ module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
 ////###################################################
 module.exports.saveImage_ReplacebyID = (req) => new Promise((resolve, reject) => {
     db = req.db
-    itemList = req.body.itemList
+    itemList = req.body.item_list
 })
 
 module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
     db = req.db
-    itemList = req.body.itemList
+    itemList = req.body.item_list
 
     itemList = itemList.map((item) => {
         return item.images.map((image) => {
@@ -346,6 +349,7 @@ module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
 
 module.exports.changeWantedTags = (req) => new Promise((resolve, reject) => {
     // find which tags to add and which to remove
+    req.body.nee_tags
     resolve(req)
 })
 

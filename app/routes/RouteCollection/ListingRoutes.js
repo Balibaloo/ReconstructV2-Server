@@ -40,7 +40,7 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
 
 module.exports.routes = function (app, db) {
 
-    app.post('/createListing', Auth.checkToken, (req, res) => {
+    app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
 
         promiseCollection.insertNewTags(req)
@@ -53,7 +53,7 @@ module.exports.routes = function (app, db) {
             .then((req) => {
                 res.json({
                     "message": 'Listing Saved Successfully',
-                    "Data": req.listingID
+                    "body": req.listingID
                 })
             })
             .then(console.log('Listing Saved sucsessfully'))
@@ -67,6 +67,10 @@ module.exports.routes = function (app, db) {
             })
     });
 
+    app.post('/auth/addListingtoWatchList', Auth.checkToken)
+
+    app.post('/auth/removeListingfromWatchList', Auth.checkToken)
+
     app.get('/getListingNoAuth', (req, res) => {
         req.db = db
         promiseCollection.getListing(req)
@@ -77,7 +81,7 @@ module.exports.routes = function (app, db) {
                 console.log('Listing Fetched Successfully')
                 res.json({
                     "message": 'Listing Fetched Succesfully',
-                    "Data": req.listing
+                    "body": req.listing
                 })
             })
             .catch((req) => {
@@ -85,7 +89,7 @@ module.exports.routes = function (app, db) {
             })
     });
 
-    app.get('/getListingAuthenticated', Auth.checkToken, (req, res) => {
+    app.get('/auth/getListing', Auth.checkToken, (req, res) => {
         req.db = db
 
         /// need to replace image ids with loaded images
@@ -99,7 +103,7 @@ module.exports.routes = function (app, db) {
                 console.log('Listing Fetched Successfully')
                 res.json({
                     "message": 'Listing Fetched Succesfully',
-                    "Data": req.listing
+                    "body": req.listing
                 })
             })
             .catch((req) => {
@@ -129,9 +133,14 @@ module.exports.routes = function (app, db) {
             if (error) {
                 customErrorLogger.logServerError(res, error, error.message)
             } else if (results[0]) {
+                results = results.map((item) => {
+                    item.isActive = item.isActive == '1' ? true : false
+                    return item
+                })
+                console.log("Front page Listings sent succesfully")
                 res.json({
                     'message': "Fetched Succefully",
-                    'data': results
+                    'body': results
                 })
             } else {
                 customErrorLogger.logServerError(res, new Error('No Entries Exist'))
@@ -158,15 +167,19 @@ module.exports.routes = function (app, db) {
                     customErrorLogger.logServerError(res, error, 'Filter listing error')
                 } else {
                     console.log('Filtered Results Sent Succesfully')
+                    results = results.map((item) => {
+                        item.isActive = item.isActive == 1 ? true : false
+                        return item
+                    })
                     res.json({
                         "message": 'Filtered Results Fetched Succesfully',
-                        "Data": results
+                        "body": results
                     })
                 }
             })
     });
 
-    app.get('/getRecentListings', Auth.checkToken, (req, res) => {
+    app.get('/auth/getRecentListings', Auth.checkToken, (req, res) => {
         let sql = `SELECT *
         FROM listing
         RIGHT JOIN
@@ -183,9 +196,13 @@ module.exports.routes = function (app, db) {
                 customErrorLogger.logServerError(res, error, "Recent Listing Error")
             } else {
                 console.log('Recent Listings Sent Successfully')
+                results = results.map((item) => {
+                    item.isActive = item.isActive == 1 ? true : false
+                    return item
+                })
                 res.json({
                     "message": 'Recent Listings Fetched Succesfully',
-                    "Data": results
+                    "body": results
                 })
             }
         })
@@ -209,9 +226,10 @@ module.exports.routes = function (app, db) {
                 console.log("Desired Items Fetched Succesfully")
                 res.json({
                     "message": 'Desired Items Fetched Succesfully',
-                    "Data": results
+                    "body": results
                 })
             }
         });
     });
+
 }

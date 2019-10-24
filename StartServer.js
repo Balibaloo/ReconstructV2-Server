@@ -24,7 +24,7 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json())
 
 
-require('./app/routes')(app, connection);
+require('./app/index')(app, connection);
 
 app.listen(port, () => {
   console.log('Ya Boi is live on ' + port);

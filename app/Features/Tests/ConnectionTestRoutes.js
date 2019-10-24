@@ -1,6 +1,6 @@
-const Auth = require('../../helpers/AuthenticationHelper');
-const emails = require('../../helpers/Emails')
-const promises = require('../../helpers/promises')
+const Auth = require('../Authentication/AuthenticationHelper');
+const listingPromises = require('../Listings/ListingsPromises')
+
 
 
 module.exports.routes = function (app, db) {
@@ -20,7 +20,7 @@ module.exports.routes = function (app, db) {
 
     app.get('/date', (req, res) => {
         req.db = db
-        promises.insertNewTags(req)
+        listingPromises.insertNewTags(req)
     })
 
 }

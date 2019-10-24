@@ -1,7 +1,6 @@
 const customErrorLogger = require('../../helpers/CustomErrors')
-const promiseCollection = require('../../helpers/promises');
-const Auth = require('../../helpers/AuthenticationHelper');
-const sqlBuilder = require('sql')
+const listingPromises = require('./ListingsPromises')
+const Auth = require('../Authentication/AuthenticationHelper');
 
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
@@ -43,23 +42,23 @@ module.exports.routes = function (app, db) {
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
 
-        promiseCollection.insertNewTags(req)
+        listingPromises.insertNewTags(req)
         /// need to save images sent to server, and replace them with their ids
-        promiseCollection.insertMainListing(req)
-            .then(promiseCollection.insertListingItems)
-            .then(promiseCollection.insertImageIds)
-            .then(promiseCollection.insertNewTags)
-            .then(promiseCollection.insertItemTags)
+        listingPromises.insertMainListing(req)
+            .then(listingPromises.insertListingItems)
+            .then(listingPromises.insertImageIds)
+            .then(listingPromises.insertNewTags)
+            .then(listingPromises.insertItemTags)
             .then((req) => {
                 res.json({
                     "message": 'Listing Saved Successfully',
-                    "body": req.listingID
+                    "listing": req.listingID
                 })
             })
             .then(console.log('Listing Saved sucsessfully'))
             .catch((req) => {
-                customErrorLogger.logServerError(res, req.error ? req.error : req)
-                promiseCollection.deleteListing(req)
+                listingPromises.deleteListing(req)
+                    .then(customErrorLogger.logServerError(res, req.error ? req.error : req))
                     .then(console.log('succesfully cleaned up'))
                     .catch((req) => {
                         customErrorLogger.logServerError(res, req.error, "Cleanup Error")
@@ -67,21 +66,21 @@ module.exports.routes = function (app, db) {
             })
     });
 
-    app.post('/auth/addListingtoWatchList', Auth.checkToken)
+    app.post('/auth/addListingtoWatchList', Auth.checkToken, (req, res) => { });
 
-    app.post('/auth/removeListingfromWatchList', Auth.checkToken)
+    app.post('/auth/removeListingfromWatchList', Auth.checkToken, (req, res) => { });
 
     app.get('/getListingNoAuth', (req, res) => {
         req.db = db
-        promiseCollection.getListing(req)
-            .then(promiseCollection.getListingItems)
-            .then(promiseCollection.getListingItemTags)
-            .then(promiseCollection.getListingItemImages)
+        listingPromises.getListing(req)
+            .then(listingPromises.getListingItems)
+            .then(listingPromises.getListingItemTags)
+            .then(listingPromises.getListingItemImages)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
                     "message": 'Listing Fetched Succesfully',
-                    "body": req.listing
+                    "listing": req.listing
                 })
             })
             .catch((req) => {
@@ -94,22 +93,47 @@ module.exports.routes = function (app, db) {
 
         /// need to replace image ids with loaded images
 
-        promiseCollection.getListing(req)
-            .then(promiseCollection.getListingItems)
-            .then(promiseCollection.getListingItemTags)
-            .then(promiseCollection.getListingItemImages)
-            .then(promiseCollection.saveViewRequest)
+        listingPromises.getListing(req)
+            .then(listingPromises.getListingItems)
+            .then(listingPromises.getListingItemTags)
+            .then(listingPromises.getListingItemImages)
+            .then(listingPromises.saveViewRequest)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
                     "message": 'Listing Fetched Succesfully',
-                    "body": req.listing
+                    "listing": req.listing
                 })
             })
             .catch((req) => {
                 customErrorLogger.logServerError(res, req.error, "Listing Fetch Error")
             })
     });
+
+    app.get("/auth/getUserListings", Auth.checkToken, (req, res) => {
+
+        let sql = `SELECT * FROM listing 
+                    WHERE userID = ?
+                    ORDER BY post_date DESC`
+
+        db.query(sql, req.userData.userID, (error, results) => {
+            if (error) {
+                customErrorLogger.logServerError(res, error, error.message)
+            } else if (results[0]) {
+                results = results.map((item) => {
+                    item.isActive = item.isActive == '1' ? true : false
+                    return item
+                })
+                console.log("User Listings sent succesfully")
+                res.json({
+                    'message': "Fetched Succefully",
+                    'listings': results
+                })
+            } else {
+                customErrorLogger.logServerError(res, new Error('No Entries Exist'))
+            }
+        })
+    })
 
     app.get('/getFrontPageListings', (req, res) => {
         // checks if user has provided an integer page number to load
@@ -140,7 +164,7 @@ module.exports.routes = function (app, db) {
                 console.log("Front page Listings sent succesfully")
                 res.json({
                     'message': "Fetched Succefully",
-                    'body': results
+                    'listings': results
                 })
             } else {
                 customErrorLogger.logServerError(res, new Error('No Entries Exist'))
@@ -173,7 +197,7 @@ module.exports.routes = function (app, db) {
                     })
                     res.json({
                         "message": 'Filtered Results Fetched Succesfully',
-                        "body": results
+                        "listings": results
                     })
                 }
             })
@@ -202,7 +226,7 @@ module.exports.routes = function (app, db) {
                 })
                 res.json({
                     "message": 'Recent Listings Fetched Succesfully',
-                    "body": results
+                    "listings": results
                 })
             }
         })
@@ -226,7 +250,7 @@ module.exports.routes = function (app, db) {
                 console.log("Desired Items Fetched Succesfully")
                 res.json({
                     "message": 'Desired Items Fetched Succesfully',
-                    "body": results
+                    "tags": results
                 })
             }
         });

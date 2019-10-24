@@ -1,6 +1,5 @@
 const nodemailer = require('nodemailer');
-const Auth = require('../helpers/AuthenticationHelper')
-const promises = require('../helpers/promises')
+const Auth = require('../Authentication/AuthenticationHelper')
 const crypto = require('crypto');
 
 /// to send veriffication email, send email to email provided in the user email with random code generated

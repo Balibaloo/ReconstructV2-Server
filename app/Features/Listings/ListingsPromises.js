@@ -1,6 +1,17 @@
-var uniqueID = require('uniqid')
-const Auth = require('../helpers/AuthenticationHelper');
-const sqlBuilder = require('sql')
+const Auth = require('../Authentication/AuthenticationHelper');
+
+var genSQLFromItemList = (listingItemList, listingID) => {
+    let itemListString = ''
+    listingItemList.forEach((item, index) => {
+        if (index !== 0) {
+            itemListString += ','
+        }
+
+        itemListString += arrayToSQL([item.itemID, listingID, item.name, item.description])
+    })
+
+    return itemListString
+}
 
 
 var arrayToSQL = (arr) => {
@@ -17,54 +28,7 @@ var arrayToSQL = (arr) => {
 
 };
 
-var genSQLFromNestedList = (itemList) => {
-    finalString = ''
-    itemList.forEach((IDTagArr, indexOne) => {
-        if (indexOne !== 0) {
-            finalString += ','
-        }
-        IDTagArr.forEach((IDTagPair, indexTwo) => {
-            if (indexTwo !== 0) {
-                finalString += ','
-            }
-            finalString += "("
-            IDTagPair.forEach((singleItem, singleIndex) => {
-                if (singleIndex !== 0) {
-                    finalString += ','
-                }
-                finalString += "'" + singleItem + "'"
-            })
-            finalString += ")"
 
-        })
-    })
-
-    return finalString
-}
-
-var genSQLFromItemList = (listingItemList, listingID) => {
-    let itemListString = ''
-    listingItemList.forEach((item, index) => {
-        if (index !== 0) {
-            itemListString += ','
-        }
-
-        itemListString += arrayToSQL([item.itemID, listingID, item.name, item.description])
-    })
-
-    return itemListString
-}
-
-var getSQLDateTime = ([year, month, day, hour, minute = 0, second = 0]) => {
-    return new Date(year, month - 1, day, hour + 1, minute, second).toISOString().replace("T", " ").split('.')[0]
-}
-
-var SQLDateTimetoArr = (dateTime) => {
-    dateTime = dateTime.toISOString().split("T")
-    dateTime[0] = dateTime[0].split("-")
-    dateTime[1] = dateTime[1].split(".")[0].split(":")
-    return [].concat(dateTime[0], dateTime[1])
-}
 
 module.exports.getListing = (req) => new Promise((resolve, reject) => {
     //// pulls a Listing entry from databse given listingID
@@ -72,6 +36,31 @@ module.exports.getListing = (req) => new Promise((resolve, reject) => {
     req.db.query(`SELECT *
                 FROM listing
                 WHERE listingID = '${req.body.listingID}'`, (error, results) => {
+        if (error) {
+            req.error = error
+            req.error.details = 'select listing'
+            reject(req)
+        } else if (results[0]) {
+            req.listing = results[0]
+            req.listing.isActive = req.listing.isActive == 1 ? true : false
+            console.log("Fetched Main Listing")
+            resolve(req)
+        } else {
+            req.error = new Error('no listing found')
+            req.error.details = 'no listing found'
+            reject(req)
+        }
+
+    })
+});
+
+module.exports.getUserListings = (req) => new Promise((resolve, reject) => {
+    //// pulls a Listing entry from databse given listingID
+
+    req.db.query(`SELECT *
+                FROM listing
+                WHERE listingID = '${req.body.listingID}'
+                AND authorID = '${req.userData.userID}'`, (error, results) => {
         if (error) {
             req.error = error
             req.error.details = 'select listing'
@@ -193,17 +182,6 @@ module.exports.saveUserPromise = (req) => new Promise((resolve, reject) => {
     });
 });
 
-module.exports.decodeIncomingUP = (req) => new Promise((resolve, reject) => {
-    req.userData = {}
-    module.exports.authCreds = req.headers.authorization.split(' ');
-    module.exports.decodedCreds = Buffer.from(authCreds[1], 'base64').toString().split(':');
-
-    req.userData.username = decodedCreds[0]
-    req.userData.password = decodedCreds[1]
-
-    resolve(req)
-})
-
 module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
     db = req.db
     Auth.genID((idOne) => {
@@ -273,15 +251,15 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
         })
     })
 
-    let tagArr = Array.from(tagSet)
-    // if tag doesent exist, isert it
-    let sql = `INSERT IGNORE INTRO tags VALUES(?)`
-
-    req.db.query(sql, tagArr, (error, result) => {
+    let nestedTagArr = [Array.from(tagSet).map((item) => { return [item] })]
+    // if tag doesent exist, insert it
+    let sql = `INSERT IGNORE INTO tags (tagName) VALUES ${genSQLFromNestedList(nestedTagArr)}`
+    req.db.query(sql, (error, result) => {
         if (error) {
-            console.log(error)
+            req.error = error
+            reject(req)
         } else {
-            console.log(result)
+            resolve(req)
         }
     })
 })
@@ -307,7 +285,6 @@ module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     })
 })
 
-////###################################################
 module.exports.saveImage_ReplacebyID = (req) => new Promise((resolve, reject) => {
     db = req.db
     itemList = req.body.item_list
@@ -344,22 +321,5 @@ module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
         } else {
             resolve(req)
         }
-    })
-})
-
-module.exports.changeWantedTags = (req) => new Promise((resolve, reject) => {
-    // find which tags to add and which to remove
-    req.body.nee_tags
-    resolve(req)
-})
-
-module.exports.setEmailVerified = (req) => new Promise((resolve, reject) => {
-    userID = req.userData.userID
-
-    let sql = 'UPDATE user_profile SET emailValid = 1 WHERE userID = ?'
-    req.db.query(sql, userID, (err) => {
-        if (err) { reject(err) }
-        else { resolve(req) }
-
     })
 })

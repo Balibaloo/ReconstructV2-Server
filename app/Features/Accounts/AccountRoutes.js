@@ -1,8 +1,7 @@
-const Auth = require('../../helpers/AuthenticationHelper');
-const promiseCollection = require('../../helpers/promises');
+const Auth = require('../Authentication/AuthenticationHelper');
+const accountPromises = require('./AccountPromises')
 const customErrorLogger = require('../../helpers/CustomErrors');
-const emails = require('../../helpers/Emails');
-const sqlBuilder = require('sql');
+const emails = require('../Emails/EmailsPromises');
 
 var checkUniqueEmail = (db, Email) => {
     //// checks if an email adress is already saved in the databse
@@ -19,22 +18,6 @@ var checkUniqueEmail = (db, Email) => {
     })
 };
 
-var checkUniqueUsername = (db, username) => {
-    //// checks if a username is already saved in the database
-    db.query(`SELECT *
-            FROM user_profile
-            WHERE username = '${username}'`, (error, results) => {
-        if (error) {
-            console.log(error)
-        } else if (results) {
-            return false
-        } else {
-            return true
-        }
-    })
-
-};
-
 module.exports.routes = function (app, db) {
     app.post('/createAccount', (req, res) => {
         // requires body.{
@@ -45,7 +28,7 @@ module.exports.routes = function (app, db) {
         //}
 
         req.db = db
-        promiseCollection.saveUserPromise(req)
+        accountPromises.saveUserPromise(req)
             .then(Auth.clientEncode) ////////////////////////////
             .then(Auth.saveUser)
             .then(Auth.createNewToken)
@@ -69,7 +52,7 @@ module.exports.routes = function (app, db) {
 
         if (req.headers.authorization) {
 
-            promiseCollection.decodeIncomingUP(req)
+            Auth.decodeIncomingUP(req)
                 .then(Auth.clientEncode) /////////////////////////////////////
                 .then(Auth.checkUP)
                 .then(Auth.createNewToken)
@@ -112,7 +95,7 @@ module.exports.routes = function (app, db) {
 
     app.get('/auth/changeWantedTags', Auth.checkToken, (req, res) => {
         req.db = db;
-        promiseCollection.changeWantedTags(req)
+        accountPromises.changeWantedTags(req)
             .then((req) => {
                 res.json({
                     "message": 'Wanted Tags Changed Successfully'
@@ -129,14 +112,14 @@ module.exports.routes = function (app, db) {
 
     app.get('/checkUniqueUsername', (req, res) => {
         //// requires body.username
-        if (checkUniqueUsername(req.body.username)) {
+        if (Auth.checkUniqueUsername(req.body.username)) {
             res.json({
-                "isUnused": True,
+                "isUnused": true,
                 "message": 'username available'
             });
         } else {
             res.json({
-                "isUnused": False,
+                "isUnused": false,
                 "message": 'username not available'
             });
         }
@@ -144,7 +127,7 @@ module.exports.routes = function (app, db) {
 
     app.get('/checkUniqueEmail', (req, res) => {
         //// requires body.email
-        if (checkUniqueEmail(req.body.email)) {
+        if (checkUniqueEmail(db, req.body.email)) {
             res.json({
                 "isUnused": True,
                 "message": 'username available'

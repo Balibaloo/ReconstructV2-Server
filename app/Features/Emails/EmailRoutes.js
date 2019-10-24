@@ -1,11 +1,11 @@
-const promises = require('../../helpers/promises');
-const Auth = require('../../helpers/AuthenticationHelper')
+const accountPromises = require('../Accounts/AccountPromises');
+const Auth = require('../Authentication/AuthenticationHelper')
 
 module.exports.routes = function (app, db) {
     app.get('/verifyEmail', (req, res) => {
         req.db = db
         Auth.verifyEmailVerificationCode(req)
-            .then(promises.setEmailVerified)
+            .then(accountPromises.setEmailVerified)
             .then(res.json({
                 "message": "Email Validated Succesfully!"
             }))

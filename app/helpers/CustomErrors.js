@@ -1,5 +1,3 @@
-
-
 module.exports.logServerError = (res, error, message = "Server Error") => {
     console.log(message, error)
     res.status(500).json({

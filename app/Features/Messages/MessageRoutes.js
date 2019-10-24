@@ -1,5 +1,4 @@
-const Auth = require('../../helpers/AuthenticationHelper');
-const sqlBuilder = require('sql')
+const Auth = require('../Authentication/AuthenticationHelper');
 const customErrors = require('../../helpers/CustomErrors')
 
 module.exports.routes = function (app, db) {

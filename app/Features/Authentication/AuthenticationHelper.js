@@ -14,6 +14,17 @@ var authServer = mysql.createConnection({
     database: dbName,
 });
 
+module.exports.decodeIncomingUP = (req) => new Promise((resolve, reject) => {
+    req.userData = {}
+    authCreds = req.headers.authorization.split(' ');
+    decodedCreds = Buffer.from(authCreds[1], 'base64').toString().split(':');
+
+    req.userData.username = decodedCreds[0]
+    req.userData.password = decodedCreds[1]
+
+    resolve(req)
+})
+
 module.exports.checkToken = (req, res, next) => {
     //// middleware that checks if the token provided with a request is valid
     console.log('Checking Token')
@@ -60,6 +71,22 @@ module.exports.checkToken = (req, res, next) => {
             "message": "No Credentials Provided"
         })
     };
+};
+
+module.exports.checkUniqueUsername = (username) => {
+    //// checks if a username is already saved in the database
+    authServer.query(`SELECT *
+            FROM login_credentials
+            WHERE username = '${username}'`, (error, results) => {
+        if (error) {
+            console.log(error)
+        } else if (results) {
+            return false
+        } else {
+            return true
+        }
+    })
+
 };
 
 module.exports.clientEncode = (req) => new Promise((resolve, reject) => {

@@ -1,6 +1,7 @@
 var mysql = require('mysql')
 var bcrypt = require('bcrypt')
 var uniqueID = require('uniqid')
+var customErrors = require('../../helpers/CustomErrors')
 
 const dbhost = "localhost";
 const dbuser = "ServerAuther";
@@ -38,11 +39,7 @@ module.exports.checkToken = (req, res, next) => {
                 (error, result) => {
 
                     if (error) {
-                        console.log(error);
-                        res.status(500).json({
-                            "messge": 'Server Error, please try again later',
-                            "error": error
-                        })
+                        customErrors.logServerError(res, error, error.message)
                     }
 
                     if (result[0]) {
@@ -54,25 +51,20 @@ module.exports.checkToken = (req, res, next) => {
                         next();
 
                     } else {
-                        res.status(403).json({
-                            "message": 'Token Not valid'
-                        })
-                    };
+                        customErrors.logUserError(res, "Token Not Valid", 403)
+                    }
                 });
 
         } else {
-            res.status(403).json({
-                "message": "Wrong Auth Type"
-            })
+            customErrors.logUserError(res, "Wrong Auth Type", 403)
         };
 
     } else {
-        res.status(403).json({
-            "message": "No Credentials Provided"
-        })
+        customErrors.logUserError(res, "No Credentials Provided", 403)
     };
 };
 
+/// turn into prommise
 module.exports.checkUniqueUsername = (username) => {
     //// checks if a username is already saved in the database
     authServer.query(`SELECT *
@@ -111,8 +103,9 @@ module.exports.checkUP = (req) => new Promise((resolve, reject) => {
         user = user[0]
         if (error) {
             req.error = error
-            req.error.details = 'User select'
+            req.error.details = 'no Username'
             reject(req);
+
         } else if (user) {
             req.userData.userID = user.userID
             userSalt = user.salt
@@ -121,6 +114,7 @@ module.exports.checkUP = (req) => new Promise((resolve, reject) => {
                     req.error = error
                     req.error.details = 'Hashing error'
                     reject(req);
+
                 } else {
                     if (compHash === user.password) {
                         resolve(req)
@@ -149,6 +143,7 @@ module.exports.saveUser = (req) => new Promise((resolve, reject) => {
                 req.error = error
                 req.error.details = 'Hashing'
                 reject(req)
+
             } else {
                 authServer.query(`INSERT INTO login_credentials (userID, username, password, salt) VALUES ('${req.userData.userID}', '${req.userData.username}', '${password}', '${salt}')`,
                     (error) => {
@@ -177,14 +172,13 @@ module.exports.createNewToken = (req) => new Promise((resolve, reject) => {
             req.error = error
             req.error.details = 'No valid token found'
             reject(req);
+
         } else {
             result = result[0]
         };
 
         if (result) {
-            req.userData.userToken = result['Token']
-            // dont give the user their token back, destroy all active tokens
-            resolve(req)
+            destroyAllTokens(req.userData.userID)
         } else {
             this.genID((newToken) => {
                 req.userData.userToken = newToken
@@ -207,6 +201,16 @@ module.exports.createNewToken = (req) => new Promise((resolve, reject) => {
     });
 
 });
+
+var destroyAllTokens = (userID) => {
+    let sql = 'UPDATE alltokens SET isValid = 0 WHERE userID = ?'
+
+    authServer.query(sql, userID, (error, result) => {
+        if (error) {
+            console.log(error)
+        }
+    })
+}
 
 module.exports.checkUniqueUser = (username) => {
     //// varifies that the username is unique

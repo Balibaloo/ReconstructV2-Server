@@ -1,33 +1,5 @@
 const Auth = require('../Authentication/AuthenticationHelper');
 
-var genSQLFromItemList = (listingItemList, listingID) => {
-    let itemListString = ''
-    listingItemList.forEach((item, index) => {
-        if (index !== 0) {
-            itemListString += ','
-        }
-
-        itemListString += arrayToSQL([item.itemID, listingID, item.name, item.description])
-    })
-
-    return itemListString
-}
-
-
-var arrayToSQL = (arr) => {
-    //// converts an array to an SQL insertable format String
-    let finalString = '('
-    arr.forEach((item, index) => {
-        if (index !== 0) {
-            finalString += ' ,'
-        }
-        finalString += `"${item}"`
-    })
-    finalString += ')'
-    return finalString
-
-};
-
 
 
 module.exports.getListing = (req) => new Promise((resolve, reject) => {
@@ -35,7 +7,7 @@ module.exports.getListing = (req) => new Promise((resolve, reject) => {
 
     req.db.query(`SELECT *
                 FROM listing
-                WHERE listingID = '${req.body.listingID}'`, (error, results) => {
+                WHERE listingID = ?`, [req.body.listingID], (error, results) => {
         if (error) {
             req.error = error
             req.error.details = 'select listing'
@@ -56,11 +28,11 @@ module.exports.getListing = (req) => new Promise((resolve, reject) => {
 
 module.exports.getUserListings = (req) => new Promise((resolve, reject) => {
     //// pulls a Listing entry from databse given listingID
-
-    req.db.query(`SELECT *
-                FROM listing
-                WHERE listingID = '${req.body.listingID}'
-                AND authorID = '${req.userData.userID}'`, (error, results) => {
+    const sql = `SELECT *
+    FROM listing
+    WHERE listingID = ?
+    AND authorID = ?`
+    req.db.query(sql, [req.body.listingID, req.userData.userID], (error, results) => {
         if (error) {
             req.error = error
             req.error.details = 'select listing'
@@ -83,8 +55,8 @@ module.exports.getListingItems = (req) => new Promise((resolve, reject) => {
     //// pulls every item associated with a listingID from database
 
     req.db.query(`SELECT *
-                FROM listing_item WHERE listingID = '${req.body.listingID}'
-                `, (error, results) => {
+                FROM listing_item WHERE listingID = ?
+                `, [req.body.listingID], (error, results) => {
         if (error) {
             req.error = error
             req.error.details = 'listing fetch error'
@@ -148,7 +120,7 @@ module.exports.saveViewRequest = (req) => new Promise((resolve, reject) => {
         Auth.genID((newID) => {
             req.db.query(`INSERT INTO view_log
                     (viewID, userID ,listingID)
-                    VALUES ('${newID}', '${req.userData.userID}', '${req.listing.listingID}')`, (error) => {
+                    VALUES ?`, [[newID, req.userData.userID, req.listing.listingID]], (error) => {
                 if (error) {
                     req.error = error
                     req.error.details = 'lsiting view save error'
@@ -166,9 +138,9 @@ module.exports.saveUserPromise = (req) => new Promise((resolve, reject) => {
     req.userData = req.body
     Auth.genID((userID) => {
         req.userData.userID = userID
-        req.db.query(`INSERT INTO user_profile
-                (userID, fName, lName, email, phone)
-                VALUES ('${req.userData.userID}','${req.userData.first_name}','${req.userData.last_name}','${req.userData.email}',${req.userData.phone})`,
+        req.db.query(`INSERT INTO user_profile (userID, fName, lName, email, phone)
+                    VALUES ?`,
+            [[req.userData.userID, req.userData.first_name, req.userData.last_name, req.userData.email, req.userData.phone]],
             (error, result) => {
                 if (error) {
                     req.error = error
@@ -200,7 +172,7 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
 
         db.query(`INSERT INTO listing
         (listingID, authorID, title, body, mainPhoto, end_date, location)
-        VALUES ('${listingID}','${authorID}','${title}','${body}','${mainPhoto}','${end_date}','${location}')`,
+        VALUES ?`, [[listingID, authorID, title, body, mainPhoto, end_date, location]],
             (error) => {
                 if (error) {
                     req.error = error
@@ -228,7 +200,8 @@ module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
 
     req.body.item_list = itemList //// saves itemlist with item ids for other functions
 
-    db.query(`INSERT INTO listing_item (listingItemID, listingID, name, description) VALUES ${genSQLFromItemList(itemList, listingID)}`, (error) => {
+    const sql = `INSERT INTO listing_item (listingItemID, listingID, name, description) VALUES ?`
+    db.query(sql, [[itemList, listingID]], (error) => {
         if (error) {
             req.error = error
             req.error.details = "item Save Error"
@@ -251,10 +224,10 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
         })
     })
 
-    let nestedTagArr = [Array.from(tagSet).map((item) => { return [item] })]
+    let nestedTagArr = Array.from(tagSet).map((item) => { return [item] })
     // if tag doesent exist, insert it
-    let sql = `INSERT IGNORE INTO tags (tagName) VALUES ${genSQLFromNestedList(nestedTagArr)}`
-    req.db.query(sql, (error, result) => {
+    let sql = `INSERT IGNORE INTO tags (tagName) VALUES ?`
+    req.db.query(sql, [nestedTagArr], (error, result) => {
         if (error) {
             req.error = error
             reject(req)
@@ -273,8 +246,8 @@ module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
             return [tag, item.itemID, req.listingID]
         })
     })
-
-    db.query(`INSERT INTO listing_item_tags (TagID,listingItemID,listingID) VALUES ${genSQLFromNestedList(itemList)}`, (error) => {
+    let sql = `INSERT INTO listing_item_tags (TagID,listingItemID,listingID) VALUES ?`
+    db.query(sql, [itemList], (error) => {
         if (error) {
             req.error = error
             req.error.details = "tag Save Error"
@@ -300,7 +273,8 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
         })
     })
 
-    db.query(`INSERT INTO listing_item_images (imageID,listingItemID) VALUES ${genSQLFromNestedList(itemList)}`, (error) => {
+    const sql = `INSERT INTO listing_item_images (imageID,listingItemID) VALUES ?`;
+    db.query(sql, [itemList], (error) => {
         if (error) {
             req.error = error
             req.error.details = "image Save Error"
@@ -313,7 +287,7 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
 })
 
 module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
-    req.db.query(`DELETE FROM listing WHERE listingID = '${req.listingID}'`, (error) => {
+    req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.listingID], (error) => {
         if (error) {
             req.error = error
             req.error.details = "listing delete Error"

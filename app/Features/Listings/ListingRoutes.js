@@ -57,6 +57,7 @@ module.exports.routes = function (app, db) {
             })
             .then(console.log('Listing Saved sucsessfully'))
             .catch((req) => {
+                req.db = db
                 listingPromises.deleteListing(req)
                     .then(customErrorLogger.logServerError(res, req.error ? req.error : req))
                     .then(console.log('succesfully cleaned up'))

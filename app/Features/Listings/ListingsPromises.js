@@ -1,6 +1,6 @@
 const Auth = require('../Authentication/AuthenticationHelper');
 
-
+const uniqueID = require('uniqid')
 
 module.exports.getListing = (req) => new Promise((resolve, reject) => {
     //// pulls a Listing entry from databse given listingID
@@ -120,7 +120,7 @@ module.exports.saveViewRequest = (req) => new Promise((resolve, reject) => {
         Auth.genID((newID) => {
             req.db.query(`INSERT INTO view_log
                     (viewID, userID ,listingID)
-                    VALUES ?`, [[newID, req.userData.userID, req.listing.listingID]], (error) => {
+                    VALUES ?`, [[[newID, req.userData.userID, req.listing.listingID]]], (error) => {
                 if (error) {
                     req.error = error
                     req.error.details = 'lsiting view save error'
@@ -162,7 +162,7 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
             body,
             end_date,
             location,
-            mainPhoto
+            main_photo
         } = req.body
 
         var listingID = idOne
@@ -171,8 +171,8 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
         req.listingID = listingID
 
         db.query(`INSERT INTO listing
-        (listingID, authorID, title, body, mainPhoto, end_date, location)
-        VALUES ?`, [[listingID, authorID, title, body, mainPhoto, end_date, location]],
+        (listingID, authorID, title, body, main_photo, end_date, location)
+        VALUES ?`, [[[listingID, authorID, title, body, main_photo, end_date, location]]],
             (error) => {
                 if (error) {
                     req.error = error
@@ -189,19 +189,21 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
 module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
     db = req.db
     listingID = req.listingID
-    itemList = req.body.item_list
+    itemList = req.body.item_list.map((item) => {
+        item.itemID = uniqueID()
+        return item
+    })//// saves itemlist with item ids for other functions
 
-    itemList.map((item) => {
-        Auth.genID((newID) => {
-            item.itemID = newID;
-            return item
-        })
+    req.body.item_list = itemList
+
+    itemListToInsert = itemList.map((item) => {
+        return [item.itemID, listingID, item.name, item.description]
     })
 
-    req.body.item_list = itemList //// saves itemlist with item ids for other functions
+    console.log(itemList)
 
     const sql = `INSERT INTO listing_item (listingItemID, listingID, name, description) VALUES ?`
-    db.query(sql, [[itemList, listingID]], (error) => {
+    db.query(sql, [itemListToInsert], (error) => {
         if (error) {
             req.error = error
             req.error.details = "item Save Error"
@@ -241,13 +243,14 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
 module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     itemList = req.body.item_list
 
-    itemList = itemList.map((item) => {
-        return item.tags.map((tag) => {
-            return [tag, item.itemID, req.listingID]
-        })
+    ///for every tag make a [tagID,ListingItemID,ListingID]
+    finalTagArray = []
+    itemList.forEach((item) => {
+        item.tags.forEach((tag) => { finalTagArray.push([tag, item.itemID, req.listingID]) })
     })
+
     let sql = `INSERT INTO listing_item_tags (TagID,listingItemID,listingID) VALUES ?`
-    db.query(sql, [itemList], (error) => {
+    db.query(sql, [finalTagArray], (error) => {
         if (error) {
             req.error = error
             req.error.details = "tag Save Error"
@@ -268,9 +271,7 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
     itemList = req.body.item_list
 
     itemList = itemList.map((item) => {
-        return item.images.map((image) => {
-            return [image, item.itemID]
-        })
+        return [item.images, item.itemID]
     })
 
     const sql = `INSERT INTO listing_item_images (imageID,listingItemID) VALUES ?`;
@@ -283,8 +284,7 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
             resolve(req)
         }
     })
-
-})
+});
 
 module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
     req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.listingID], (error) => {

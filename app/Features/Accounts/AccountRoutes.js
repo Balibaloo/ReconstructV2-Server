@@ -3,22 +3,24 @@ const accountPromises = require('./AccountPromises')
 const customErrorLogger = require('../../helpers/CustomErrors');
 const emails = require('../Emails/EmailsPromises');
 
-var checkUniqueEmail = (db, Email) => {
+/// promisify
+var checkUniqueEmail = (db, Email) => new Promise((resolve, reject) => {
     //// checks if an email adress is already saved in the databse
-    db.query(`SELECT *
-            FROM user_profile
-            WHERE Email = '${Email}'`, (error, results) => {
+    let sql = `SELECT *
+    FROM user_profile
+    WHERE Email = ?`
+    db.query(sql, Email, (error, results) => {
         if (error) {
-            console.log(error)
-        } else if (results) {
-            return false
+            reject(error)
+        } else if (results[0]) {
+            resolve(false)
         } else {
-            return true
+            resolve(true)
         }
     })
-};
+});
 
-module.exports.routes = function (app, db) {
+module.exports = function (app, db) {
     app.post('/createAccount', (req, res) => {
         // requires body.{
         // username, password String
@@ -36,7 +38,7 @@ module.exports.routes = function (app, db) {
             .then((req) => {
                 res.json({
                     'message': 'User Created',
-                    'userToken': req.userData.userToken
+                    'user_token': req.userData.userToken
                 })
             }).catch((req) => {
                 //console.log('User create error (', req.error.details, ')', req.error.message);
@@ -110,33 +112,34 @@ module.exports.routes = function (app, db) {
             })
     });
 
+    app.post('/auth/addListingtoWatchList', Auth.checkToken, (req, res) => { });
+
+    app.post('/auth/removeListingfromWatchList', Auth.checkToken, (req, res) => { });
+
+    app.get('/auth/getWatchlist', Auth.checkToken, (req, res) => { })
+
     app.get('/checkUniqueUsername', (req, res) => {
         //// requires body.username
-        if (Auth.checkUniqueUsername(req.body.username)) {
+        Auth.checkUniqueUsername(req.body.username).then((isUnique) => {
             res.json({
-                "isUnused": true,
-                "message": 'username available'
+                "message": isUnique ? 'username available' : "username is already in use",
+                "is_unused": isUnique
             });
-        } else {
-            res.json({
-                "isUnused": false,
-                "message": 'username not available'
-            });
-        }
+            console.log("checked unique username")
+        }).catch((error) => { customErrorLogger.logServerError(req, error) })
+
     });
 
     app.get('/checkUniqueEmail', (req, res) => {
         //// requires body.email
-        if (checkUniqueEmail(db, req.body.email)) {
-            res.json({
-                "isUnused": True,
-                "message": 'username available'
-            });
-        } else {
-            res.json({
-                "isUnused": False,
-                "message": 'username not available'
-            });
-        }
+        checkUniqueEmail(db, req.body.email)
+            .then((isUnique) => {
+                res.json({
+                    "message": isUnique ? "email is available" : 'email is already in use',
+                    "is_unused": isUnique,
+                })
+            }).catch((error) => { customErrorLogger.logServerError(req, error) })
+
+
     });
 }

@@ -36,8 +36,7 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
 
 }
 
-
-module.exports.routes = function (app, db) {
+module.exports = function (app, db) {
 
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
@@ -52,7 +51,7 @@ module.exports.routes = function (app, db) {
             .then((req) => {
                 res.json({
                     "message": 'Listing Saved Successfully',
-                    "listing": req.listingID
+                    "listingID": req.listingID
                 })
             })
             .then(console.log('Listing Saved sucsessfully'))
@@ -66,10 +65,6 @@ module.exports.routes = function (app, db) {
                     })
             })
     });
-
-    app.post('/auth/addListingtoWatchList', Auth.checkToken, (req, res) => { });
-
-    app.post('/auth/removeListingfromWatchList', Auth.checkToken, (req, res) => { });
 
     app.get('/getListingNoAuth', (req, res) => {
         req.db = db

@@ -3,7 +3,8 @@ const Auth = require('../Authentication/AuthenticationHelper');
 const uniqueID = require('uniqid')
 
 module.exports.getListing = (req) => new Promise((resolve, reject) => {
-    //// pulls a Listing entry from databse given listingID
+    //// retreives a Listing entry from databse given listingID
+    // needs req.body.listingID
 
     req.db.query(`SELECT *
                 FROM listing
@@ -27,7 +28,8 @@ module.exports.getListing = (req) => new Promise((resolve, reject) => {
 });
 
 module.exports.getUserListings = (req) => new Promise((resolve, reject) => {
-    //// pulls a Listing entry from databse given listingID
+    //// retreives a Listing entry from databse given listingID
+    // needs req.body.listingID and req.userData.userID (added during Auth.checkToken)
     const sql = `SELECT *
     FROM listing
     WHERE listingID = ?
@@ -52,8 +54,8 @@ module.exports.getUserListings = (req) => new Promise((resolve, reject) => {
 });
 
 module.exports.getListingItems = (req) => new Promise((resolve, reject) => {
-    //// pulls every item associated with a listingID from database
-
+    //// retreives every listing_item associated with a listingID from database
+    // needs req.body.listingID
     req.db.query(`SELECT *
                 FROM listing_item WHERE listingID = ?
                 `, [req.body.listingID], (error, results) => {
@@ -74,7 +76,7 @@ module.exports.getListingItems = (req) => new Promise((resolve, reject) => {
 });
 
 module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
-
+    //// retreives listin
     let sql = `SELECT * FROM tags
     JOIN (SELECT tagID,listingItemID
         FROM listing_item_tags
@@ -228,7 +230,7 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
 
     let nestedTagArr = Array.from(tagSet).map((item) => { return [item] })
     // if tag doesent exist, insert it
-    let sql = `INSERT IGNORE INTO tags (tagName) VALUES ?`
+    let sql = `INSERT INTO tags (tagName) VALUES ?`
     req.db.query(sql, [nestedTagArr], (error, result) => {
         if (error) {
             req.error = error
@@ -242,7 +244,7 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
 
 module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     itemList = req.body.item_list
-
+    //// add sql statement to join tagName with tag
     ///for every tag make a [tagID,ListingItemID,ListingID]
     finalTagArray = []
     itemList.forEach((item) => {

@@ -64,23 +64,6 @@ module.exports.checkToken = (req, res, next) => {
     };
 };
 
-/// turn into prommise
-module.exports.checkUniqueUsername = (username) => {
-    //// checks if a username is already saved in the database
-    authServer.query(`SELECT *
-            FROM login_credentials
-            WHERE username = '${username}'`, (error, results) => {
-        if (error) {
-            console.log(error)
-        } else if (results) {
-            return false
-        } else {
-            return true
-        }
-    })
-
-};
-
 module.exports.clientEncode = (req) => new Promise((resolve, reject) => {
     //// temporary function to act as the client side ecoding for authentication purpouses
     var MasterSalt = '$2b$10$BjJdSB802DiH35SVuhITvO'
@@ -212,18 +195,20 @@ var destroyAllTokens = (userID) => {
     })
 }
 
-module.exports.checkUniqueUser = (username) => {
-    //// varifies that the username is unique
-    authServer.query(`SELECT * FROM login_credentials WHERE Username = '${username}'`, (error, results) => {
+module.exports.checkUniqueUsername = (username) => new Promise((resolve, reject) => {
+    //// checks if a username is already saved in the database
+    let sql = 'SELECT * FROM login_credentials WHERE username = ?'
+    authServer.query(sql, username, (error, results) => {
         if (error) {
-            console.log(error)
-        } else if (results) {
-            return false
+            reject(error)
+        } else if (results[0]) {
+            resolve(false)
         } else {
-            return true
+            resolve(true)
         }
     })
-};
+
+});
 
 module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolve, reject) => {
     let sql = 'INSERT INTO emailverification (userID,verificationID) VALUES(?,?)'

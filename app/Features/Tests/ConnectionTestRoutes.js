@@ -1,26 +1,20 @@
 const Auth = require('../Authentication/AuthenticationHelper');
 const listingPromises = require('../Listings/ListingsPromises')
 
-
-
-module.exports.routes = function (app, db) {
-    app.get('//', Auth.checkToken, (req, res) => {
-        console.log('Auth test request received')
-        res.json({
-            "message": "Authenticated Conection Successful!"
-        });
-    });
-
+module.exports = function (app, db) {
+    //tests unauthenticated connections
     app.get('/', (req, res) => {
         console.log('test request received')
         res.json({
-            "message": "Conection Successful!"
+            "message": "Connection Successful!"
         });
     });
 
-    app.get('/date', (req, res) => {
-        req.db = db
-        listingPromises.insertNewTags(req)
-    })
-
+    //tests authenticated connections
+    app.get('/auth', Auth.checkToken, (req, res) => {
+        console.log('Auth test request received')
+        res.json({
+            "message": "Authenticated Connection Successful!"
+        });
+    });
 }

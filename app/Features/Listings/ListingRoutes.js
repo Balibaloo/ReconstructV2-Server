@@ -45,8 +45,9 @@ module.exports = function (app, db) {
         /// need to save images sent to server, and replace them with their ids
         listingPromises.insertMainListing(req)
             .then(listingPromises.insertListingItems)
-            .then(listingPromises.insertImageIds)
+            //.then(listingPromises.insertImageIds)
             .then(listingPromises.insertNewTags)
+            .then(listingPromises.replaceTagsWithIDs)
             .then(listingPromises.insertItemTags)
             .then((req) => {
                 res.json({

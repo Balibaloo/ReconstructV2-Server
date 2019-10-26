@@ -202,8 +202,6 @@ module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
         return [item.itemID, listingID, item.name, item.description]
     })
 
-    console.log(itemList)
-
     const sql = `INSERT INTO listing_item (listingItemID, listingID, name, description) VALUES ?`
     db.query(sql, [itemListToInsert], (error) => {
         if (error) {
@@ -221,37 +219,71 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
     itemList = req.body.item_list
 
     let tagSet = new Set();
-
     itemList.forEach((item) => {
         item.tags.forEach((tag) => {
             tagSet.add(tag)
         })
     })
 
-    let nestedTagArr = Array.from(tagSet).map((item) => { return [item] })
+    req.body.tagNameArray = Array.from(tagSet)
+    let nestedTagArr = req.body.tagNameArray.map((item) => { return [item] })
+
     // if tag doesent exist, insert it
-    let sql = `INSERT INTO tags (tagName) VALUES ?`
+    let sql = `INSERT IGNORE INTO tags (tagName) VALUES ? `
     req.db.query(sql, [nestedTagArr], (error, result) => {
         if (error) {
             req.error = error
             reject(req)
         } else {
+
             resolve(req)
         }
     })
 })
 
 
+module.exports.replaceTagsWithIDs = (req) => new Promise((resolve, reject) => {
+    let sql = `SELECT * FROM tags WHERE tagName IN (?)`
+
+    req.db.query(sql, [req.body.tagNameArray], (error, results) => {
+        if (error) {
+            reject(error)
+        } else {
+            tagnameIdDict = tagResultListToDicionary(results)
+            req.body.item_list = req.body.item_list.map((item) => {
+                item.tags = item.tags.map((tagName) => {
+                    return tagnameIdDict[tagName]
+                })
+                return item
+            })
+
+            resolve(req)
+        }
+    })
+
+});
+
+var tagResultListToDicionary = (tagDataList) => {
+    returnDictionary = {}
+    tagDataList.forEach((item) => {
+        returnDictionary[item.tagName] = item.tagID
+    })
+    return returnDictionary
+
+}
+
 module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     itemList = req.body.item_list
-    //// add sql statement to join tagName with tag
-    ///for every tag make a [tagID,ListingItemID,ListingID]
+    tagArr = req.body.tagArray
+
     finalTagArray = []
     itemList.forEach((item) => {
-        item.tags.forEach((tag) => { finalTagArray.push([tag, item.itemID, req.listingID]) })
+        tags = item.tags
+        tags.forEach((tagID) => { finalTagArray.push([tagID, item.itemID, req.listingID]) })
     })
 
     let sql = `INSERT INTO listing_item_tags (TagID,listingItemID,listingID) VALUES ?`
+
     db.query(sql, [finalTagArray], (error) => {
         if (error) {
             req.error = error

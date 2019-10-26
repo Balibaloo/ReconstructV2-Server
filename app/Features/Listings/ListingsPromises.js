@@ -302,12 +302,17 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
     db = req.db
     itemList = req.body.item_list
 
+    finalImageArray = []
+    itemList.forEach((item) => {
+        item.images.forEach((imageID) => { finalImageArray.push([imageID, item.itemID]) })
+    })
+
     itemList = itemList.map((item) => {
         return [item.images, item.itemID]
     })
 
-    const sql = `INSERT INTO listing_item_images (imageID,listingItemID) VALUES ?`;
-    db.query(sql, [itemList], (error) => {
+    const sql = `INSERT INTO listing_item_images (temporaryID,listingItemID) VALUES ?`;
+    db.query(sql, [finalImageArray], (error) => {
         if (error) {
             req.error = error
             req.error.details = "image Save Error"

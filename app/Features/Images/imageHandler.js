@@ -13,11 +13,12 @@ module.exports.sendImage = (res, image_name) => new Promise((resolve, reject) =>
 
 module.exports.checkImageIsSaved = (db, tempImageId) => new Promise((resolve, reject) => {
     let sql = `SELECT * FROM listing_item_images 
-                WHERE imageID = ?`
+                WHERE temporaryID = ?`
     db.query(sql, [tempImageId], (error, result) => {
         if (error) {
             reject(error)
         } else if (result[0]) {
+            console
             if (result[0].isSaved == 1) {
                 console.log("image already localy saved")
                 reject(result[0].imageID)// image already localy saved
@@ -36,7 +37,7 @@ module.exports.saveImagetoDB = (req) => new Promise((resolve, reject) => {
 
     let sql = `UPDATE listing_item_images
                 SET imageID = ? , isSaved = 1
-                WHERE imageID = ?`
+                WHERE temporaryID = ?`
 
     req.db.query(sql, [req.body.newID, req.body.temp_imageID], (error, result) => {
         if (error) { reject(error) }

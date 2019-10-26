@@ -14,18 +14,24 @@ const storage = multer.diskStorage({
 })
 
 const fileSaveFilter = (req, file, cb) => {
-    imagePromises.checkImageIsSaved(req.db, req)
-        .then(cb(null, true))
-        .catch((error) => {
-            if (!typeof error === 'string') {
-                cb(error, false)
-            } else {
-                req.localImageID = error
-                cb(null, false)
-            } // change this to send imageId back
+    imagePromises.checkImageIsSaved(req.db, req.body.temp_imageID)
+        .then(() => {
+            req.saveSuccessful = true
+            cb(null, true)
         })
-
+        .catch((errorOrImageiD) => {
+            if (typeof errorOrImageiD === 'string') {
+                req.saveSuccessful = false
+                req.localImageID = errorOrImageiD
+                cb(null, false)
+            } else {
+                console.log("received error")
+                req.error = errorOrImageiD
+                cb(null, false)
+            }
+        })
 }
+
 const upload = multer({ storage: storage, fileFilter: fileSaveFilter })
 path = require('path')
 
@@ -36,10 +42,17 @@ module.exports = (app, db) => {
         imagePromises.sendImage(res, req.body.image_name)
     })
 
-    app.post("/auth/saveImage", (req, res, next) => { req.db = db; next() }, upload.single("image"), Auth.checkToken, (req, res) => {
-        if (req.localImageID) {
+    app.post("/auth/saveImage", Auth.checkToken, (req, res, next) => { req.db = db; next() }, upload.single("image"), (req, res) => {
+        if (req.error) {
+            customErrors.logUserError(res, req.error.message, 404)
+        } else if (!req.saveSuccessful) {
             res.json({
-                "message": "listing already saved",
+                "message": "image already saved",
+                "imageID": req.localImageID
+            })
+        } else if (req.saveSuccessful) {
+            res.json({
+                "message": "image saved successfuly",
                 "imageID": req.localImageID
             })
         }

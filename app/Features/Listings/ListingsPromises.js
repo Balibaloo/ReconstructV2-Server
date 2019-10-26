@@ -112,6 +112,7 @@ module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
 
 //#################################################################################
 module.exports.getListingItemImages = (req) => new Promise((resolve, reject) => {
+    //// just need to load image ID strings into item
     console.log("Fetched Listing Item Images")
     resolve(req)
 });
@@ -181,6 +182,7 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
                     req.error.details = "main Save Error"
                     reject(req)
                 } else {
+                    console.log("Inserted Main Listing")
                     resolve(req)
                 }
             }
@@ -209,12 +211,12 @@ module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
             req.error.details = "item Save Error"
             reject(req)
         } else {
+            console.log("Inserted Listing Items")
             resolve(req)
         }
     })
 })
 
-////////////////////////////////
 module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
     itemList = req.body.item_list
 
@@ -235,12 +237,11 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
             req.error = error
             reject(req)
         } else {
-
+            console.log("Inserted New Tags")
             resolve(req)
         }
     })
 })
-
 
 module.exports.replaceTagsWithIDs = (req) => new Promise((resolve, reject) => {
     let sql = `SELECT * FROM tags WHERE tagName IN (?)`
@@ -256,7 +257,7 @@ module.exports.replaceTagsWithIDs = (req) => new Promise((resolve, reject) => {
                 })
                 return item
             })
-
+            console.log("Replaced Tag names with tagIDs")
             resolve(req)
         }
     })
@@ -270,7 +271,7 @@ var tagResultListToDicionary = (tagDataList) => {
     })
     return returnDictionary
 
-}
+};
 
 module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     itemList = req.body.item_list
@@ -290,16 +291,13 @@ module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
             req.error.details = "tag Save Error"
             reject(req)
         } else {
+            console.log("Inserted Item - Tags")
             resolve(req)
         }
     })
 })
 
-module.exports.saveImage_ReplacebyID = (req) => new Promise((resolve, reject) => {
-    db = req.db
-    itemList = req.body.item_list
-})
-
+///////////////////////////////////////////////////////
 module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
     db = req.db
     itemList = req.body.item_list
@@ -318,7 +316,8 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
             resolve(req)
         }
     })
-});
+});///////////////////////////////////////////////////////
+
 
 module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
     req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.listingID], (error) => {

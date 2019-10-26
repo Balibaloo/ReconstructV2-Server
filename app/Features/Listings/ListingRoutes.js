@@ -41,21 +41,20 @@ module.exports = function (app, db) {
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
 
-        listingPromises.insertNewTags(req)
         /// need to save images sent to server, and replace them with their ids
         listingPromises.insertMainListing(req)
             .then(listingPromises.insertListingItems)
-            //.then(listingPromises.insertImageIds)
+            .then(listingPromises.insertImageIds)
             .then(listingPromises.insertNewTags)
             .then(listingPromises.replaceTagsWithIDs)
             .then(listingPromises.insertItemTags)
             .then((req) => {
+                console.log('Listing Saved sucsessfully')
                 res.json({
                     "message": 'Listing Saved Successfully',
                     "listingID": req.listingID
                 })
             })
-            .then(console.log('Listing Saved sucsessfully'))
             .catch((req) => {
                 req.db = db
                 listingPromises.deleteListing(req)

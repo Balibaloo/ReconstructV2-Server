@@ -297,7 +297,6 @@ module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     })
 })
 
-///////////////////////////////////////////////////////
 module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
     db = req.db
     itemList = req.body.item_list
@@ -307,9 +306,6 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
         item.images.forEach((imageID) => { finalImageArray.push([imageID, item.itemID]) })
     })
 
-    itemList = itemList.map((item) => {
-        return [item.images, item.itemID]
-    })
 
     const sql = `INSERT INTO listing_item_images (temporaryID,listingItemID) VALUES ?`;
     db.query(sql, [finalImageArray], (error) => {
@@ -321,8 +317,7 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
             resolve(req)
         }
     })
-});///////////////////////////////////////////////////////
-
+});
 
 module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
     req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.listingID], (error) => {

@@ -1,15 +1,43 @@
 const uniqueID = require('uniqid')
+const fs = require('fs')
 
 var genImagePath = (image_name) => {
     return path.join(__dirname, "../../../ImageStorage/" + image_name + ".jpg")
 }
 
-module.exports.sendImage = (res, image_name) => new Promise((resolve, reject) => {
+var sendImagedaw = (res, image_name, message = "Successfully fetched", imageID = image_name) => {
     imagePath = genImagePath(image_name)
-    res.append("message", "Successfully fetched")
+    res.append("message", message)
+    res.append("imageID", imageID)
     res.sendFile(imagePath)
-    resolve()
-})
+}
+
+module.exports.sendImage = (db, res, image_name) => new Promise((resolve, reject) => {
+    let imagePath = genImagePath(image_name)
+
+    fs.access(imagePath, fs.F_OK, (err) => {
+        if (err) {
+            if (err.message.slice(0, 6) === 'ENOENT') {
+                let sql = "SELECT * FROM listing_item_images WHERE temporaryID = ?"
+                db.query(sql, [image_name], (error, result) => {
+                    if (error) {
+                        reject(error)
+                    } else if (result[0]) {
+                        sendImagedaw(res, result[0].imageID, "Please use new Image ID", result[0].imageID)
+                        resolve()
+                    } else { reject() }
+                })
+            } else { reject(err) }
+        } else {
+            sendImagedaw(res, image_name)
+            resolve()
+        }
+    })
+
+
+
+}
+);
 
 module.exports.checkImageIsSaved = (db, tempImageId) => new Promise((resolve, reject) => {
     let sql = `SELECT * FROM listing_item_images 

@@ -73,3 +73,36 @@ module.exports.saveImagetoDB = (req) => new Promise((resolve, reject) => {
     })
 
 })
+
+module.exports.fetchImageIDs = (req) => new Promise((resolve, reject) => {
+    let sqlSelect = `SELECT imageID WHERE
+                isSaved = 1 AND
+                listingItemID IN
+                (SELECT listingItemID 
+                    FROM listing_item 
+                    WHERE listingID = ? )`
+
+    req.db.query(sqlSelect, [req.body.listingID], (error, result) => {
+        if (error) {
+            reject(error)
+        } else if (result) {
+            req.imageIDstoDelete = result
+        } else { req.imageIDstoDelete = "empty" }
+    })
+})
+
+module.exports.deleteImages = req => new Promise((resolve, reject) => {
+    if (req.imageIDstoDelete == "empty") { resolve() }
+
+    deleteFiles(req.imageIDstoDelete)
+})
+
+const deleteFiles = (arr) => new Promise((resolve, reject) => {
+    if (arr.length != 0) {
+        fs.unlink(genImagePath(arr.shift()), (error) => {
+            if (error) {
+                reject(error)
+            } else { deleteFiles(arr) }
+        })
+    } else (resolve())
+})

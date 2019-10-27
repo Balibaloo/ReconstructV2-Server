@@ -1,9 +1,7 @@
-const fs = require('fs')
 
-let imagePath = "D:\WORKUSER\Profile.V6\Documents\Computer Science\VsCode\MyWork\ImageStorage\ixws9fgk282paj6.jpg"
+var sttt = [1]
 
-fs.access(imagePath, fs.F_OK, (err) => {
-    if (err.message.slice(0, 6) === 'ENOENT') {
-        console.log("error caught")
-    }
-})
+x = sttt.shift()
+y = sttt
+
+console.log(y.length)

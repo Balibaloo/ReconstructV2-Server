@@ -319,12 +319,28 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
-    req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.listingID], (error) => {
+module.exports.checkUserIsAuthor = (req) => new Promise((resolve, reject) => {
+    let sql = `SELECT authorID FROM listing WHERE listingID = ?`
+
+    db.query(sql, [], (error, result) => {
         if (error) {
-            req.error = error
-            req.error.details = "listing delete Error"
-            reject(req)
+            reject(error)
+        } else if (result[0]) {
+            if (result[0].authorID == req.userData.userID) {
+                resolve(req)
+            } else {
+                reject(new Error('You Are not the author of this listing'))
+            }
+        } else {
+            reject(new Error('Listing Does not exist'))
+        }
+    })
+})
+
+module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
+    req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.body.listingID], (error) => {
+        if (error) {
+            reject(error)
         } else {
             resolve(req)
         }

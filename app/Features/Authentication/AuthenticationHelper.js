@@ -40,9 +40,7 @@ module.exports.checkToken = (req, res, next) => {
 
                     if (error) {
                         customErrors.logServerError(res, error, error.message)
-                    }
-
-                    if (result[0]) {
+                    } else if (result[0]) {
                         result = result[0]
                         req.userData = {}
                         req.userData.userToken = result["Token"]
@@ -247,13 +245,15 @@ module.exports.verifyEmailVerificationCode = (req) => new Promise((resolve, reje
 
 })
 
+
+// unused
 module.exports.getUsername = (userID) => new Promise((resolve, reject) => {
     authServer.query(`SELECT username FROM login_credentials WHERE userID = '${userID}'`, (error, results) => {
         if (error) {
         } if (results[0]) {
             resolve(results[0].username)
         }
-        else { }
+        else { reject() }
     });
 });
 

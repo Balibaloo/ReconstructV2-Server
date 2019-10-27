@@ -1,6 +1,7 @@
 const customErrorLogger = require('../../helpers/CustomErrors')
 const listingPromises = require('./ListingsPromises')
 const Auth = require('../Authentication/AuthenticationHelper');
+const imagePromises = require('../Images/imageHandler')
 
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
@@ -251,5 +252,17 @@ module.exports = function (app, db) {
             }
         });
     });
+
+    app.get('/auth/deleteListing', Auth.checkToken, (req, res) => {
+        listingPromises.checkUserIsAuthor(req)
+            .then(imagePromises.fetchImageIDs)
+            .then(imagePromises.deleteImages)
+            .then(listingPromises.deleteListng)
+            .then(res.send({
+                "message": "Listing Succesfully Deleted"
+            }))
+            .catch((error) => { customErrorLogger.logServerError(res, error) })
+    });
+
 
 }

@@ -76,10 +76,10 @@ module.exports = function (app, db) {
 
     });
 
-    app.get('/auth/getUserProfile', Auth.checkToken, (req, res) => {
+    app.get('/getUserProfile', (req, res) => {
         db.query(`SELECT *
                 FROM user_profile
-                WHERE userID = '${req.userData.userID}' `, function (error, result) {
+                WHERE userID = '${req.body.userID}' `, function (error, result) {
             if (error) {
                 customErrorLogger.logServerError(res, error, "Get User Error")
             } else if (result[0]) {

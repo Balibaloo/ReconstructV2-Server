@@ -39,7 +39,9 @@ module.exports.sendImage = (db, res, image_name) => new Promise((resolve, reject
 }
 );
 
-module.exports.checkImageIsSaved = (db, tempImageId) => new Promise((resolve, reject) => {
+module.exports.checkImageIsSaved = (req) => new Promise((resolve, reject) => {
+    db = req.db
+    tempImageId = req.body.temp_imageID
     let sql = `SELECT * FROM listing_item_images 
                 WHERE temporaryID = ?`
     db.query(sql, [tempImageId], (error, result) => {
@@ -52,7 +54,7 @@ module.exports.checkImageIsSaved = (db, tempImageId) => new Promise((resolve, re
                 reject(result[0].imageID)// image already localy saved
             } else {
                 console.log("listing saved but images havent arrived yet")
-                resolve() // listing saved but images havent arrived yet
+                resolve(req) // listing saved but images havent arrived yet
             }
         } else {
             reject(new Error("Image slot doesent exist")) // Image and listing dont exist

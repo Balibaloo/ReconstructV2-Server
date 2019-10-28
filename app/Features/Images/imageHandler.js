@@ -43,7 +43,7 @@ module.exports.checkImageIsSaved = (req) => new Promise((resolve, reject) => {
     db = req.db
     tempImageId = req.body.temp_imageID
     let sql = `SELECT * FROM listing_item_images 
-                WHERE temporaryID = ?`
+                WHERE temporaryID = ? `
     db.query(sql, [tempImageId], (error, result) => {
         if (error) {
             reject(error)
@@ -77,7 +77,7 @@ module.exports.saveImagetoDB = (req) => new Promise((resolve, reject) => {
 })
 
 module.exports.fetchImageIDs = (req) => new Promise((resolve, reject) => {
-    let sqlSelect = `SELECT imageID WHERE
+    let sqlSelect = `SELECT imageID FROM listing_item_images WHERE
                 isSaved = 1 AND
                 listingItemID IN
                 (SELECT listingItemID 
@@ -87,24 +87,36 @@ module.exports.fetchImageIDs = (req) => new Promise((resolve, reject) => {
     req.db.query(sqlSelect, [req.body.listingID], (error, result) => {
         if (error) {
             reject(error)
-        } else if (result) {
+        } else if (result[0]) {
             req.imageIDstoDelete = result
-        } else { req.imageIDstoDelete = "empty" }
+            resolve(req)
+        } else {
+            req.imageIDstoDelete = "empty"
+            resolve(req)
+        }
     })
 })
 
 module.exports.deleteImages = req => new Promise((resolve, reject) => {
-    if (req.imageIDstoDelete == "empty") { resolve() }
+    if (req.imageIDstoDelete == "empty") {
+        console.log('no images to delete')
+        resolve(req)
+    }
 
     deleteFiles(req.imageIDstoDelete)
+        .then(() => console.log('Images Deleted'))
+        .then(() => resolve(req))
+        .catch(error => reject(error))
 })
 
 const deleteFiles = (arr) => new Promise((resolve, reject) => {
     if (arr.length != 0) {
-        fs.unlink(genImagePath(arr.shift()), (error) => {
+        fs.unlink(genImagePath(arr.shift().imageID), (error) => {
             if (error) {
                 reject(error)
-            } else { deleteFiles(arr) }
+            } else {
+                deleteFiles(arr).then(resolve)
+            }
         })
-    } else (resolve())
+    } else { resolve() }
 })

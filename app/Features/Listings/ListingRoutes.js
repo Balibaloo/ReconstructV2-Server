@@ -254,11 +254,15 @@ module.exports = function (app, db) {
     });
 
     app.get('/auth/deleteListing', Auth.checkToken, (req, res) => {
+        req.db = db
+        // body.listingID
+
         listingPromises.checkUserIsAuthor(req)
             .then(imagePromises.fetchImageIDs)
             .then(imagePromises.deleteImages)
-            .then(listingPromises.deleteListng)
-            .then(res.send({
+            .then(listingPromises.deleteListing)
+            .then(() => console.log("Listing Succesfully Deleted"))
+            .then(() => res.send({
                 "message": "Listing Succesfully Deleted"
             }))
             .catch((error) => { customErrorLogger.logServerError(res, error) })

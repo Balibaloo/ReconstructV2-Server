@@ -320,13 +320,15 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
 });
 
 module.exports.checkUserIsAuthor = (req) => new Promise((resolve, reject) => {
+    console.log(req.body.listingID)
     let sql = `SELECT authorID FROM listing WHERE listingID = ?`
 
-    db.query(sql, [], (error, result) => {
+    req.db.query(sql, [req.body.listingID], (error, result) => {
         if (error) {
             reject(error)
         } else if (result[0]) {
             if (result[0].authorID == req.userData.userID) {
+                console.log("User Is Author")
                 resolve(req)
             } else {
                 reject(new Error('You Are not the author of this listing'))

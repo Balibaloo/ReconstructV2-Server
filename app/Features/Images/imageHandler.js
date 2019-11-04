@@ -5,41 +5,54 @@ var genImagePath = (image_name) => {
     return path.join(__dirname, "../../../ImageStorage/" + image_name + ".jpg")
 }
 
-var sendImagedaw = (res, image_name, message = "Successfully fetched", imageID = image_name) => {
-    imagePath = genImagePath(image_name)
+module.exports.checkFileExists = req => new Promise((resolve, reject) => {
+    req.myArgs.usedWrongID = false
+
+    let imagePath = genImagePath(req.query.imageID)
+
+    fs.access(imagePath, fs.F_OK, (err) => {
+        if (err) {
+            if (err.message.slice(0, 6) === 'ENOENT') {
+                req.myArgs.usedWrongID = true
+                resolve(req)
+            } else { reject(err) }
+        } else {
+            resolve(req)
+        }
+    })
+});
+
+module.exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
+    if (!req.myArgs.usedWrongID) { resolve(req) }
+
+    let sql = `SELECT imageID, isSaved
+                FROM listing_item_images WHERE temporaryID = ?
+                ORDER BY isSaved DESC`
+
+    req.db.query(sql, [req.body.imageID], (error, result) => {
+        if (error) {
+            reject(error)
+        } else if (result[0]) {
+            if (result[0].isSaved != 0) {
+                req.myArgs.actualImageID = result[0].imageID
+                resolve(req)
+            } else { reject(new Error("Image Data Has Not Arrived Yet"), "user") }
+
+        } else { reject(new Error("Invalid ListingID"), "user") }
+    })
+});
+
+module.exports.sendImageFile = (req, res) => {
+    imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.body.imageID
+    message = req.myArgs.usedWrongID ? "Please Use New ID" : "Successfully fetched"
+
+    imagePath = genImagePath(imageID)
     res.append("message", message)
     res.append("imageID", imageID)
     res.sendFile(imagePath)
 }
 
-module.exports.sendImage = (db, res, image_name) => new Promise((resolve, reject) => {
-    let imagePath = genImagePath(image_name)
-
-    fs.access(imagePath, fs.F_OK, (err) => {
-        if (err) {
-            if (err.message.slice(0, 6) === 'ENOENT') {
-                let sql = "SELECT * FROM listing_item_images WHERE temporaryID = ?"
-                db.query(sql, [image_name], (error, result) => {
-                    if (error) {
-                        reject(error)
-                    } else if (result[0]) {
-                        sendImagedaw(res, result[0].imageID, "Please use new Image ID", result[0].imageID)
-                        resolve()
-                    } else { reject() }
-                })
-            } else { reject(err) }
-        } else {
-            sendImagedaw(res, image_name)
-            resolve()
-        }
-    })
-
-
-
-}
-);
-
-module.exports.checkImageIsSaved = (req) => new Promise((resolve, reject) => {
+module.exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
     db = req.db
     tempImageId = req.body.temp_imageID
     let sql = `SELECT * FROM listing_item_images 
@@ -62,7 +75,7 @@ module.exports.checkImageIsSaved = (req) => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.saveImagetoDB = (req) => new Promise((resolve, reject) => {
+module.exports.saveImagetoDB = req => new Promise((resolve, reject) => {
     req.body.newID = uniqueID()
 
     let sql = `UPDATE listing_item_images
@@ -76,7 +89,7 @@ module.exports.saveImagetoDB = (req) => new Promise((resolve, reject) => {
 
 })
 
-module.exports.fetchImageIDs = (req) => new Promise((resolve, reject) => {
+module.exports.fetchImageIDs = req => new Promise((resolve, reject) => {
     let sqlSelect = `SELECT imageID FROM listing_item_images WHERE
                 isSaved = 1 AND
                 listingItemID IN

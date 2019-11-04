@@ -2,7 +2,7 @@ const Auth = require('../Authentication/AuthenticationHelper');
 
 const uniqueID = require('uniqid')
 
-module.exports.getListing = (req) => new Promise((resolve, reject) => {
+module.exports.getListing = req => new Promise((resolve, reject) => {
     //// retreives a Listing entry from databse given listingID
     // needs req.body.listingID
 
@@ -20,14 +20,14 @@ module.exports.getListing = (req) => new Promise((resolve, reject) => {
             resolve(req)
         } else {
             req.error = new Error('no listing found')
-            req.error.details = 'no listing found'
+            req.error.details = 'no listing found, id = ' + req.body.listingID
             reject(req)
         }
 
     })
 });
 
-module.exports.getUserListings = (req) => new Promise((resolve, reject) => {
+module.exports.getUserListings = req => new Promise((resolve, reject) => {
     //// retreives a Listing entry from databse given listingID
     // needs req.body.listingID and req.userData.userID (added during Auth.checkToken)
     const sql = `SELECT *
@@ -53,7 +53,7 @@ module.exports.getUserListings = (req) => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.getListingItems = (req) => new Promise((resolve, reject) => {
+module.exports.getListingItems = req => new Promise((resolve, reject) => {
     //// retreives every listing_item associated with a listingID from database
     // needs req.body.listingID
     req.db.query(`SELECT *
@@ -75,7 +75,7 @@ module.exports.getListingItems = (req) => new Promise((resolve, reject) => {
 
 });
 
-module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
+module.exports.getListingItemTags = req => new Promise((resolve, reject) => {
     //// retreives listin
     let sql = `SELECT * FROM tags
     JOIN (SELECT tagID,listingItemID
@@ -111,13 +111,13 @@ module.exports.getListingItemTags = (req) => new Promise((resolve, reject) => {
 });
 
 //#################################################################################
-module.exports.getListingItemImages = (req) => new Promise((resolve, reject) => {
+module.exports.getListingItemImages = req => new Promise((resolve, reject) => {
     //// just need to load image ID strings into item
     console.log("Fetched Listing Item Images")
     resolve(req)
 });
 
-module.exports.saveViewRequest = (req) => new Promise((resolve, reject) => {
+module.exports.saveViewRequest = req => new Promise((resolve, reject) => {
     //// logs a view request if the authorID does not match userID
     if (req.userData.userID != req.listing.authorID) {
         Auth.genID((newID) => {
@@ -137,7 +137,7 @@ module.exports.saveViewRequest = (req) => new Promise((resolve, reject) => {
     } else { resolve(req) }
 });
 
-module.exports.saveUserPromise = (req) => new Promise((resolve, reject) => {
+module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
     req.userData = req.body
     Auth.genID((userID) => {
         req.userData.userID = userID
@@ -157,7 +157,7 @@ module.exports.saveUserPromise = (req) => new Promise((resolve, reject) => {
     });
 });
 
-module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
+module.exports.insertMainListing = req => new Promise((resolve, reject) => {
     db = req.db
     Auth.genID((idOne) => {
         var {
@@ -190,7 +190,7 @@ module.exports.insertMainListing = (req) => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
+module.exports.insertListingItems = req => new Promise((resolve, reject) => {
     db = req.db
     listingID = req.listingID
     itemList = req.body.item_list.map((item) => {
@@ -217,7 +217,7 @@ module.exports.insertListingItems = (req) => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
+module.exports.insertNewTags = req => new Promise((resolve, reject) => {
     itemList = req.body.item_list
 
     let tagSet = new Set();
@@ -243,7 +243,7 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.replaceTagsWithIDs = (req) => new Promise((resolve, reject) => {
+module.exports.replaceTagsWithIDs = req => new Promise((resolve, reject) => {
     let sql = `SELECT * FROM tags WHERE tagName IN (?)`
 
     req.db.query(sql, [req.body.tagNameArray], (error, results) => {
@@ -273,7 +273,7 @@ var tagResultListToDicionary = (tagDataList) => {
 
 };
 
-module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
+module.exports.insertItemTags = req => new Promise((resolve, reject) => {
     itemList = req.body.item_list
     tagArr = req.body.tagArray
 
@@ -297,7 +297,7 @@ module.exports.insertItemTags = (req) => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
+module.exports.insertImageIds = req => new Promise((resolve, reject) => {
     db = req.db
     itemList = req.body.item_list
 
@@ -319,7 +319,7 @@ module.exports.insertImageIds = (req) => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.checkUserIsAuthor = (req) => new Promise((resolve, reject) => {
+module.exports.checkUserIsAuthor = req => new Promise((resolve, reject) => {
     console.log(req.body.listingID)
     let sql = `SELECT authorID FROM listing WHERE listingID = ?`
 
@@ -339,7 +339,7 @@ module.exports.checkUserIsAuthor = (req) => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.deleteListing = (req) => new Promise((resolve, reject) => {
+module.exports.deleteListing = req => new Promise((resolve, reject) => {
     req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.body.listingID], (error) => {
         if (error) {
             reject(error)

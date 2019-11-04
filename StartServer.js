@@ -10,7 +10,7 @@ const dbpass = "SQLSECURE";
 const dbName = "dataserver";
 
 // initialise connecion to dataserver
-var connection = mysql.createConnection({
+var database = mysql.createConnection({
   host: dbhost,
   user: dbuser,
   password: dbpass,
@@ -24,11 +24,11 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json())
 
 // initialises all routes
-require('./app/index')(app, connection);
+require('./app/index')(app, database);
 
 // start server
 app.listen(port, () => {
   console.log('Server is live on ' + port);
-  require("./app/helpers/Routines")() // starts my routines
+  require("./app/helpers/Routines")(database) // starts my routines
 });
 

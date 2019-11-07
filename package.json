@@ -1,11 +1,11 @@
 {
-  "name": "seriousserver",
+  "name": "reconstructserver",
   "version": "1.0.0",
   "description": "",
-  "main": "SeriousServer.js",
+  "main": "StartServer.js",
   "scripts": {
-    "start": "node SeriousServer.js",
-    "dev": "nodemon SeriousServer.js"
+    "start": "node StartServer.js",
+    "dev": "nodemon StartServer.js"
   },
   "author": "",
   "license": "ISC",

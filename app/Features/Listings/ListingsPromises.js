@@ -244,9 +244,9 @@ module.exports.insertNewTags = (req) => new Promise((resolve, reject) => {
 })
 
 module.exports.replaceTagsWithIDs = (req) => new Promise((resolve, reject) => {
-    let sql = `SELECT * FROM tags WHERE tagName IN (?)`
+    let sql = `SELECT * FROM tags WHERE tagName IN ?`
 
-    req.db.query(sql, [req.body.tagNameArray], (error, results) => {
+    req.db.query(sql, [[req.body.tagNameArray]], (error, results) => {
         if (error) {
             reject(error)
         } else {

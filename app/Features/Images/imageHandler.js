@@ -18,6 +18,7 @@ module.exports.sendImage = (db, res, image_name) => new Promise((resolve, reject
     fs.access(imagePath, fs.F_OK, (err) => {
         if (err) {
             if (err.message.slice(0, 6) === 'ENOENT') {
+                // same as check image is saved
                 let sql = "SELECT * FROM listing_item_images WHERE temporaryID = ?"
                 db.query(sql, [image_name], (error, result) => {
                     if (error) {
@@ -42,7 +43,8 @@ module.exports.sendImage = (db, res, image_name) => new Promise((resolve, reject
 module.exports.checkImageIsSaved = (req) => new Promise((resolve, reject) => {
     db = req.db
     tempImageId = req.body.temp_imageID
-    let sql = `SELECT * FROM listing_item_images 
+    // same as send image
+    let sql = `SELECT * FROM listing_item_images
                 WHERE temporaryID = ? `
     db.query(sql, [tempImageId], (error, result) => {
         if (error) {
@@ -80,8 +82,8 @@ module.exports.fetchImageIDs = (req) => new Promise((resolve, reject) => {
     let sqlSelect = `SELECT imageID FROM listing_item_images WHERE
                 isSaved = 1 AND
                 listingItemID IN
-                (SELECT listingItemID 
-                    FROM listing_item 
+                (SELECT listingItemID
+                    FROM listing_item
                     WHERE listingID = ? )`
 
     req.db.query(sqlSelect, [req.body.listingID], (error, result) => {

@@ -134,7 +134,7 @@ module.exports = function (app, db) {
 
     app.get('/getFrontPageListings', (req, res) => {
         // checks if user has provided an integer page number to load
-        const listingsPerPage = 10
+        const listingsPerPage = req.body.listingsPerPage
 
         let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
 
@@ -171,7 +171,7 @@ module.exports = function (app, db) {
     });
 
     app.get('/getFilteredListings', (req, res) => {
-        const listingsPerPage = 10
+        const listingsPerPage = req.body.listingsPerPage
         let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
 
         searchStringArr = req.body.searchString.split(" ")
@@ -203,18 +203,21 @@ module.exports = function (app, db) {
     });
 
     app.get('/auth/getRecentListings', Auth.checkToken, (req, res) => {
+        const listingsPerPage = req.body.listingsPerPage
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
+
         let sql = `SELECT *
         FROM listing
         RIGHT JOIN
         (SELECT *
             FROM view_log
             ORDER BY view_date DESC
-            LIMIT 10
+            LIMIT ?,?
             ) AS top10
         ON listing.listingID = top10.listingID
         WHERE userID = ?`
 
-        db.query(sql, req.userData.userID, (error, results) => {
+        db.query(sql, [pageOffset, listingsPerPage, req.userData.userID], (error, results) => {
             if (error) {
                 customErrorLogger.logServerError(res, error, "Recent Listing Error")
             } else {
@@ -229,10 +232,10 @@ module.exports = function (app, db) {
                 })
             }
         })
-    });
+    });const listingsPerPage = req.body.listingsPerPage
 
     app.get('/getDesiredItems', (req, res) => {
-        const listingsPerPage = 10
+        const listingsPerPage = req.body.listingsPerPage
         let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
 
         let sql = `SELECT * FROM tags

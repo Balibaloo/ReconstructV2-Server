@@ -274,5 +274,4 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
             .catch((error) => { customErrorLogger.logServerError(res, error) })
     });
 
-
 }

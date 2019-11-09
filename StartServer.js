@@ -31,4 +31,3 @@ app.listen(port, () => {
   console.log('Server is live on ' + port);
   require("./app/helpers/Routines")(database) // starts my routines
 });
-

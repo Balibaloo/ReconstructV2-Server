@@ -5,7 +5,7 @@ var genImagePath = (image_name) => {
     return path.join(__dirname, "../../../ImageStorage/" + image_name + ".jpg")
 }
 
-module.exports.checkFileExists = req => new Promise((resolve, reject) => {
+exports.checkFileExists = req => new Promise((resolve, reject) => {
     req.myArgs.usedWrongID = false
 
     let imagePath = genImagePath(req.query.imageID)
@@ -22,7 +22,7 @@ module.exports.checkFileExists = req => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
+exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
     if (!req.myArgs.usedWrongID) { resolve(req) }
 
     let sql = `SELECT imageID, isSaved
@@ -42,7 +42,7 @@ module.exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.sendImageFile = (req, res) => {
+exports.sendImageFile = (req, res) => {
     imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.body.imageID
     message = req.myArgs.usedWrongID ? "Please Use New ID" : "Successfully fetched"
 
@@ -52,7 +52,7 @@ module.exports.sendImageFile = (req, res) => {
     res.sendFile(imagePath)
 }
 
-module.exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
+exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
     db = req.db
     tempImageId = req.body.temp_imageID
     let sql = `SELECT * FROM listing_item_images 
@@ -75,7 +75,7 @@ module.exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.saveImagetoDB = req => new Promise((resolve, reject) => {
+exports.saveImagetoDB = req => new Promise((resolve, reject) => {
     req.body.newID = uniqueID()
 
     let sql = `UPDATE listing_item_images
@@ -89,7 +89,7 @@ module.exports.saveImagetoDB = req => new Promise((resolve, reject) => {
 
 })
 
-module.exports.fetchImageIDs = req => new Promise((resolve, reject) => {
+exports.fetchImageIDs = req => new Promise((resolve, reject) => {
     let sqlSelect = `SELECT imageID FROM listing_item_images WHERE
                 isSaved = 1 AND
                 listingItemID IN
@@ -110,7 +110,7 @@ module.exports.fetchImageIDs = req => new Promise((resolve, reject) => {
     })
 })
 
-module.exports.deleteImages = req => new Promise((resolve, reject) => {
+exports.deleteImages = req => new Promise((resolve, reject) => {
     if (req.imageIDstoDelete == "empty") {
         console.log('no images to delete')
         resolve(req)

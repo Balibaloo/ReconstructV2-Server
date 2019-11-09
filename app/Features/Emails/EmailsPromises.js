@@ -19,7 +19,7 @@ var getEmail = (db, userId) => new Promise((resolve, reject) => {
 })
 
 
-module.exports.sendAccountVerification = async req => {
+exports.sendAccountVerification = async req => {
     let testVar = req
     userEmail = await getEmail(req.db, req.userData.userID)
     username = await Auth.getUsername(req.userData.userID)

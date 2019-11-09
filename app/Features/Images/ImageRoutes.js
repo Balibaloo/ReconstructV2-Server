@@ -66,7 +66,7 @@ const getAuthorFromImageID = req => new Promise((resolve, reject) => {
 
 const upload = multer({ storage: storage, fileFilter: fileSaveFilter })
 
-module.exports = (app, db) => {
+exports = (app, db) => {
 
     app.get("/getImage", (req, res) => {
         req.db = db

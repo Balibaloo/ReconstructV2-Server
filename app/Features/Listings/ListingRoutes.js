@@ -2,6 +2,7 @@ const customErrorLogger = require('../../helpers/CustomErrors')
 const listingPromises = require('./ListingsPromises')
 const Auth = require('../Authentication/AuthenticationHelper');
 const imagePromises = require('../Images/imageHandler')
+const customQueue = require('../../helpers/romansQueue')
 
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
@@ -37,7 +38,7 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
 
 }
 
-module.exports = function (app, db) {
+ exports = function (app, db) {
 
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
@@ -107,6 +108,11 @@ module.exports = function (app, db) {
             })
     });
 
+    ///////////awfdawfwwawawafwafawWHTIHJEWIFH{AOIWHJTHIUS}THIS
+    app.post('/auth/reserveItem',Auth.checkToken, (req,res) => {
+        customQueue
+    })
+
     app.get("/auth/getUserListings", Auth.checkToken, (req, res) => {
 
         let sql = `SELECT * FROM listing 
@@ -131,6 +137,35 @@ module.exports = function (app, db) {
             }
         })
     })
+
+    app.get('/auth/getRecentListings', Auth.checkToken, (req, res) => {
+        let sql = `SELECT *
+        FROM listing
+        RIGHT JOIN
+        (SELECT *
+            FROM view_log
+            ORDER BY view_date DESC
+            LIMIT 10
+            ) AS top10
+        ON listing.listingID = top10.listingID
+        WHERE userID = ?`
+
+        db.query(sql, req.userData.userID, (error, results) => {
+            if (error) {
+                customErrorLogger.logServerError(res, error, "Recent Listing Error")
+            } else {
+                console.log('Recent Listings Sent Successfully')
+                results = results.map((item) => {
+                    item.isActive = item.isActive == 1 ? true : false
+                    return item
+                })
+                res.json({
+                    "message": 'Recent Listings Fetched Succesfully',
+                    "listings": results
+                })
+            }
+        })
+    });
 
     app.get('/getFrontPageListings', (req, res) => {
         // checks if user has provided an integer page number to load
@@ -199,36 +234,7 @@ module.exports = function (app, db) {
                 }
             })
     });
-
-    app.get('/auth/getRecentListings', Auth.checkToken, (req, res) => {
-        let sql = `SELECT *
-        FROM listing
-        RIGHT JOIN
-        (SELECT *
-            FROM view_log
-            ORDER BY view_date DESC
-            LIMIT 10
-            ) AS top10
-        ON listing.listingID = top10.listingID
-        WHERE userID = ?`
-
-        db.query(sql, req.userData.userID, (error, results) => {
-            if (error) {
-                customErrorLogger.logServerError(res, error, "Recent Listing Error")
-            } else {
-                console.log('Recent Listings Sent Successfully')
-                results = results.map((item) => {
-                    item.isActive = item.isActive == 1 ? true : false
-                    return item
-                })
-                res.json({
-                    "message": 'Recent Listings Fetched Succesfully',
-                    "listings": results
-                })
-            }
-        })
-    });
-
+  
     app.get('/getDesiredItems', (req, res) => {
         const listingsPerPage = 10
         let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
@@ -253,7 +259,7 @@ module.exports = function (app, db) {
         });
     });
 
-    app.get('/auth/deleteListing', Auth.checkToken, (req, res) => {
+    app.delete('/auth/deleteListing', Auth.checkToken, (req, res) => {
         req.db = db
         // body.listingID
 

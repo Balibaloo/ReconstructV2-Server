@@ -20,7 +20,7 @@ var checkUniqueEmail = (db, Email) => new Promise((resolve, reject) => {
     })
 });
 
-exports = function (app, db) {
+module.exports = function (app, db) {
     app.post('/createAccount', (req, res) => {
         // requires body.{
         // username, password String

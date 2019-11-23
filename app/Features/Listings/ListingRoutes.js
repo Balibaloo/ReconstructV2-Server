@@ -38,7 +38,7 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
 
 }
 
- exports = function (app, db) {
+module.exports = function (app, db) {
 
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
@@ -109,7 +109,7 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
     });
 
     ///////////awfdawfwwawawafwafawWHTIHJEWIFH{AOIWHJTHIUS}THIS
-    app.post('/auth/reserveItem',Auth.checkToken, (req,res) => {
+    app.post('/auth/reserveItem', Auth.checkToken, (req, res) => {
         customQueue
     })
 
@@ -234,7 +234,7 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
                 }
             })
     });
-  
+
     app.get('/getDesiredItems', (req, res) => {
         const listingsPerPage = 10
         let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)

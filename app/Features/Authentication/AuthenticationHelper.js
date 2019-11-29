@@ -62,57 +62,43 @@ exports.checkToken = (req, res, next) => {
     };
 };
 
-exports.clientEncode = req => new Promise((resolve, reject) => {
-    //// temporary function to act as the client side ecoding for authentication purpouses
-    var MasterSalt = '$2b$10$BjJdSB802DiH35SVuhITvO'
-    var tohash = req.userData.password + req.userData.username
-    bcrypt.hash(tohash, MasterSalt, (error, result) => {
-        if (error) {
-            req.error = error
-            req.error.details = 'Hash Error'
-            reject(req)
-        } else {
-            req.userData.password = result
-            resolve(req)
-        }
-    })
-});
-
 exports.checkUP = req => new Promise((resolve, reject) => {
     //// checks username and password on login
+
+    console.log("U = "+ req.userData.username)
+    console.log("P = "+ req.userData.password)
+
 
     authServer.query(`SELECT salt,password,userID FROM login_credentials WHERE username = '${req.userData.username}'`, (error, user) => {
         user = user[0]
         if (error) {
-            req.error = error
-            req.error.details = 'no Username'
-            reject(req);
+            error = error
+            error.details = 'no Username'
+            reject(error);
 
         } else if (user) {
             req.userData.userID = user.userID
             userSalt = user.salt
             bcrypt.hash(req.userData.password, userSalt, (error, compHash) => {
                 if (error) {
-                    req.error = error
-                    req.error.details = 'Hashing error'
-                    reject(req);
+                    error = error
+                    error.details = 'Hashing error'
+                    reject(error);
 
                 } else {
                     if (compHash === user.password) {
                         resolve(req)
                     } else {
                         error = new Error('No user found')
-                        req.error = error
-                        req.error.details = 'wrong password'
-                        reject(req);
+                        error.details = 'wrong password'
+                        reject(error);
                     }
                 }
             });
         } else {
             error = new Error('No user found')
-            req.error = error
-            req.error.details = 'wrong username'
-            reject(req);
+            error.details = 'wrong username'
+            reject(error);
         }
     })
 });

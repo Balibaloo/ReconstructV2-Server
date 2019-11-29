@@ -6,10 +6,8 @@ exports.changeWantedTags = req => new Promise((resolve, reject) => {
 })
 
 exports.setEmailVerified = req => new Promise((resolve, reject) => {
-    userID = req.userData.userID
-
     let sql = 'UPDATE user_profile SET emailValid = 1 WHERE userID = ?'
-    req.db.query(sql, userID, (err) => {
+    req.db.query(sql, req.userData.userID, (err) => {
         if (err) { reject(err) }
         else { resolve(req) }
 

@@ -38,7 +38,7 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
 
 }
 
- exports = function (app, db) {
+module.exports = function (app, db) {
 
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;

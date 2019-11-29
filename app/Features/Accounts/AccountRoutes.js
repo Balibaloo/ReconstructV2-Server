@@ -20,7 +20,7 @@ var checkUniqueEmail = (db, Email) => new Promise((resolve, reject) => {
     })
 });
 
-exports = function (app, db) {
+module.exports = (app, db) => {
     app.post('/createAccount', (req, res) => {
         // requires body.{
         // username, password String
@@ -31,7 +31,6 @@ exports = function (app, db) {
 
         req.db = db
         accountPromises.saveUserPromise(req)
-            .then(Auth.clientEncode) ////////////////////////////
             .then(Auth.saveUser)
             .then(Auth.createNewToken)
             .then(emails.sendAccountVerification)
@@ -41,7 +40,6 @@ exports = function (app, db) {
                     'user_token': req.userData.userToken
                 })
             }).catch((req) => {
-                //console.log('User create error (', req.error.details, ')', req.error.message);
                 customErrorLogger.logServerError(res, req.error, 'User Create Error')
                 db.query(`DELETE FROM user_profile WHERE userID = '${req.userData.userID}'`,
                     (error) => {
@@ -55,7 +53,6 @@ exports = function (app, db) {
         if (req.headers.authorization) {
 
             Auth.decodeIncomingUP(req)
-                .then(Auth.clientEncode) /////////////////////////////////////
                 .then(Auth.checkUP)
                 .then(Auth.createNewToken)
                 .then((req) => {
@@ -63,12 +60,10 @@ exports = function (app, db) {
                         'message': 'Logged in succesfully',
                         'userToken': req.userData.userToken
                     })
-                })
-                .catch((error) => {
+                }).catch((error) => {
                     console.log('Log in error (', error.details, ')', error);
                     customErrorLogger.logServerError(res, error, "Login Error")
                 })
-
 
         } else {
             customErrorLogger.logUserError(res, "no credentials provided", 403)

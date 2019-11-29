@@ -1,4 +1,7 @@
 module.exports.logServerError = (res, error, message = "Server Error") => {
+    if (error.error){
+        error = error.error}
+        
     console.log(message, error)
     try {
         res.status(500).json({

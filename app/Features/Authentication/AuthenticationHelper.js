@@ -17,7 +17,7 @@ var authServer = mysql.createConnection({
 
 exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
     req.userData = {}
-    authCreds = req.headers.authorization.split(' ');
+    authCreds = req.headers.authorisation.split(' ');
     decodedCreds = Buffer.from(authCreds[1], 'base64').toString().split(':');
 
     req.userData.username = decodedCreds[0]

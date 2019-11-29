@@ -50,7 +50,7 @@ module.exports = (app, db) => {
 
     app.get('/auth/login', (req, res) => {
 
-        if (req.headers.authorization) {
+        if (req.headers.authorisation) {
 
             Auth.decodeIncomingUP(req)
                 .then(Auth.checkUP)

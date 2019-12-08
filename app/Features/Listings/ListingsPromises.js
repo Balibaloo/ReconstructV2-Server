@@ -19,7 +19,7 @@ exports.getListing = req => new Promise((resolve, reject) => {
             console.log("Fetched Main Listing")
             resolve(req)
         } else {
-            req.error = new Error('no listing found')
+            error = new Error('no listing found')
             error.details = 'no listing found, id = ' + req.body.listingID
             reject(error)
         }
@@ -45,7 +45,7 @@ exports.getUserListings = req => new Promise((resolve, reject) => {
             console.log("Fetched Main Listing")
             resolve(req)
         } else {
-            req.error = new Error('no listing found')
+            error = new Error('no listing found')
             error.details = 'no listing found'
             reject(error)
         }
@@ -68,7 +68,7 @@ exports.getListingItems = req => new Promise((resolve, reject) => {
             console.log("Fetched Listing Items")
             resolve(req)
         } else {
-            req.error = new Error('no listing items found')
+            error = new Error('no listing items found')
             reject(error)
         }
     })
@@ -104,7 +104,7 @@ exports.getListingItemTags = req => new Promise((resolve, reject) => {
             console.log("Fetched Listing Item Tags")
             resolve(req)
         } else {
-            req.error = new Error('no listing tags found')
+            error = new Error('no listing tags found')
             reject(error)
         }
     })

@@ -28,7 +28,7 @@ const fileSaveFilter = (req, file, cb) => {
                 cb(null, false)
             } else {
                 console.log("received error")
-                req.error = errorOrImageiD
+                error = errorOrImageiD
                 cb(null, false)
             }
         })
@@ -84,8 +84,8 @@ module.exports =(app, db) => {
     })
 
     app.post("/auth/saveImage", Auth.checkToken, (req, res, next) => { req.db = db; next() }, upload.single("image"), (req, res) => {
-        if (req.error) {
-            customErrors.logUserError(res, req.error.message, 404)
+        if (error) {
+            customErrors.logUserError(res, error.message, 404)
         } else if (!req.saveSuccessful) {
             res.json({
                 "message": "image already saved",

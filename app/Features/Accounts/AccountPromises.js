@@ -13,3 +13,23 @@ exports.setEmailVerified = req => new Promise((resolve, reject) => {
 
     })
 })
+
+exports.saveUserPromise = req => new Promise((resolve, reject) => {
+    req.userData = req.body
+    Auth.genID((userID) => {
+        req.userData.userID = userID
+        req.db.query(`INSERT INTO user_profile (userID, fName, lName, email, phone)
+                    VALUES ?`,
+            [[req.userData.userID, req.userData.first_name, req.userData.last_name, req.userData.email, req.userData.phone]],
+            (error, result) => {
+                if (error) {
+                    
+                    error.details = 'User save'
+                    reject(error)
+                } else {
+                    console.log('main User Saved')
+                    resolve(req)
+                }
+            })
+    });
+});

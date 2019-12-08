@@ -108,17 +108,17 @@ exports.saveUser = req => new Promise((resolve, reject) => {
     bcrypt.genSalt(16, (error, salt) => {
         bcrypt.hash(req.userData.password, salt, (error, password) => {
             if (error) {
-                req.error = error
-                req.error.details = 'Hashing'
-                reject(req)
+                
+                error.details = 'Hashing'
+                reject(error)
 
             } else {
                 authServer.query(`INSERT INTO login_credentials (userID, username, password, salt) VALUES ('${req.userData.userID}', '${req.userData.username}', '${password}', '${salt}')`,
                     (error) => {
                         if (error) {
-                            req.error = error
-                            req.error.details = 'Saving'
-                            reject(req);
+                            
+                            error.details = 'Saving'
+                            reject(error);
 
                         } else {
                             console.log("new user auth saved")
@@ -137,9 +137,9 @@ exports.createNewToken = req => new Promise((resolve, reject) => {
         WHERE userID = '${req.userData.userID}'
         AND isValid = 1`, (error, result) => {
         if (error) {
-            req.error = error
-            req.error.details = 'No valid token found'
-            reject(req);
+            
+            error.details = 'No valid token found'
+            reject(error);
 
         } else {
             result = result[0]
@@ -154,9 +154,9 @@ exports.createNewToken = req => new Promise((resolve, reject) => {
             (Token, isValid, userID)
             VALUES ('${req.userData.userToken}', 1,'${req.userData.userID}')`, (error) => {
                     if (error) {
-                        req.error = error
-                        req.error.details = 'inserting new token'
-                        reject(req)
+                        
+                        error.details = 'inserting new token'
+                        reject(error)
                     } else {
                         console.log("new token registred")
                         req.userData.userToken = newToken

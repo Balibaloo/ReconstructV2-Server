@@ -10,9 +10,9 @@ exports.getListing = req => new Promise((resolve, reject) => {
                 FROM listing
                 WHERE listingID = ?`, [req.body.listingID], (error, results) => {
         if (error) {
-            req.error = error
-            req.error.details = 'select listing'
-            reject(req)
+            
+            error.details = 'select listing'
+            reject(error)
         } else if (results[0]) {
             req.listing = results[0]
             req.listing.isActive = req.listing.isActive == 1 ? true : false
@@ -20,8 +20,8 @@ exports.getListing = req => new Promise((resolve, reject) => {
             resolve(req)
         } else {
             req.error = new Error('no listing found')
-            req.error.details = 'no listing found, id = ' + req.body.listingID
-            reject(req)
+            error.details = 'no listing found, id = ' + req.body.listingID
+            reject(error)
         }
 
     })
@@ -36,9 +36,9 @@ exports.getUserListings = req => new Promise((resolve, reject) => {
     AND authorID = ?`
     req.db.query(sql, [req.body.listingID, req.userData.userID], (error, results) => {
         if (error) {
-            req.error = error
-            req.error.details = 'select listing'
-            reject(req)
+            
+            error.details = 'select listing'
+            reject(error)
         } else if (results[0]) {
             req.listing = results[0]
             req.listing.isActive = req.listing.isActive == 1 ? true : false
@@ -46,8 +46,8 @@ exports.getUserListings = req => new Promise((resolve, reject) => {
             resolve(req)
         } else {
             req.error = new Error('no listing found')
-            req.error.details = 'no listing found'
-            reject(req)
+            error.details = 'no listing found'
+            reject(error)
         }
 
     })
@@ -60,16 +60,16 @@ exports.getListingItems = req => new Promise((resolve, reject) => {
                 FROM listing_item WHERE listingID = ?
                 `, [req.body.listingID], (error, results) => {
         if (error) {
-            req.error = error
-            req.error.details = 'listing fetch error'
-            reject(req)
+            
+            error.details = 'listing fetch error'
+            reject(error)
         } else if (results[0]) {
             req.listing.itemList = results
             console.log("Fetched Listing Items")
             resolve(req)
         } else {
             req.error = new Error('no listing items found')
-            reject(req)
+            reject(error)
         }
     })
 
@@ -85,9 +85,9 @@ exports.getListingItemTags = req => new Promise((resolve, reject) => {
 
     req.db.query(sql, req.listing.listingID, (error, results) => {
         if (error) {
-            req.error = error
-            req.error.details = 'listing Tag fetch error'
-            reject(req)
+            
+            error.details = 'listing Tag fetch error'
+            reject(error)
         } else if (results[0]) {
             //matches tagIds to listings using listing item id
 
@@ -105,7 +105,7 @@ exports.getListingItemTags = req => new Promise((resolve, reject) => {
             resolve(req)
         } else {
             req.error = new Error('no listing tags found')
-            reject(req)
+            reject(error)
         }
     })
 });
@@ -125,9 +125,9 @@ exports.saveViewRequest = req => new Promise((resolve, reject) => {
                     (viewID, userID ,listingID)
                     VALUES ?`, [[[newID, req.userData.userID, req.listing.listingID]]], (error) => {
                 if (error) {
-                    req.error = error
-                    req.error.details = 'lsiting view save error'
-                    reject(req)
+                    
+                    error.details = 'lsiting view save error'
+                    reject(error)
                 } else {
                     console.log("View Succesfully loged")
                     resolve(req)
@@ -146,9 +146,9 @@ exports.saveUserPromise = req => new Promise((resolve, reject) => {
             [[req.userData.userID, req.userData.first_name, req.userData.last_name, req.userData.email, req.userData.phone]],
             (error, result) => {
                 if (error) {
-                    req.error = error
-                    req.error.details = 'User save'
-                    reject(req)
+                    
+                    error.details = 'User save'
+                    reject(error)
                 } else {
                     console.log('main User Saved')
                     resolve(req)
@@ -178,9 +178,9 @@ exports.insertMainListing = req => new Promise((resolve, reject) => {
         VALUES ?`, [[[listingID, authorID, title, body, main_photo, end_date, location]]],
             (error) => {
                 if (error) {
-                    req.error = error
-                    req.error.details = "main Save Error"
-                    reject(req)
+                    
+                    error.details = "main Save Error"
+                    reject(error)
                 } else {
                     console.log("Inserted Main Listing")
                     resolve(req)
@@ -207,9 +207,9 @@ exports.insertListingItems = req => new Promise((resolve, reject) => {
     const sql = `INSERT INTO listing_item (listingItemID, listingID, name, description) VALUES ?`
     db.query(sql, [itemListToInsert], (error) => {
         if (error) {
-            req.error = error
-            req.error.details = "item Save Error"
-            reject(req)
+            
+            error.details = "item Save Error"
+            reject(error)
         } else {
             console.log("Inserted Listing Items")
             resolve(req)
@@ -234,8 +234,8 @@ exports.insertNewTags = req => new Promise((resolve, reject) => {
     let sql = `INSERT IGNORE INTO tags (tagName) VALUES ? `
     req.db.query(sql, [nestedTagArr], (error, result) => {
         if (error) {
-            req.error = error
-            reject(req)
+            
+            reject(error)
         } else {
             console.log("Inserted New Tags")
             resolve(req)
@@ -287,9 +287,9 @@ exports.insertItemTags = req => new Promise((resolve, reject) => {
 
     db.query(sql, [finalTagArray], (error) => {
         if (error) {
-            req.error = error
-            req.error.details = "tag Save Error"
-            reject(req)
+            
+            error.details = "tag Save Error"
+            reject(error)
         } else {
             console.log("Inserted Item - Tags")
             resolve(req)
@@ -310,9 +310,9 @@ exports.insertImageIds = req => new Promise((resolve, reject) => {
     const sql = `INSERT INTO listing_item_images (temporaryID,listingItemID) VALUES ?`;
     db.query(sql, [finalImageArray], (error) => {
         if (error) {
-            req.error = error
-            req.error.details = "image Save Error"
-            reject(req)
+            
+            error.details = "image Save Error"
+            reject(error)
         } else {
             resolve(req)
         }

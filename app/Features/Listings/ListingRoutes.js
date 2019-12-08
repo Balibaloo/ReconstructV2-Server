@@ -57,13 +57,12 @@ module.exports = function (app, db) {
                     "listingID": req.listingID
                 })
             })
-            .catch((req) => {
-                req.db = db
+            .catch((error) => {
                 listingPromises.deleteListing(req)
-                    .then(customErrorLogger.logServerError(res, req.error ? req.error : req))
+                    .then(customErrorLogger.logServerError(res, error))
                     .then(console.log('succesfully cleaned up'))
-                    .catch((req) => {
-                        customErrorLogger.logServerError(res, req.error, "Cleanup Error")
+                    .catch((err) => {
+                        customErrorLogger.logServerError(res, err, "Cleanup Error")
                     })
             })
     });
@@ -81,8 +80,8 @@ module.exports = function (app, db) {
                     "listing": req.listing
                 })
             })
-            .catch((req) => {
-                customErrorLogger.logServerError(res, req.error, "Listing Could not be Fetched")
+            .catch((err) => {
+                customErrorLogger.logServerError(res, err, "Listing Could not be Fetched")
             })
     });
 
@@ -103,8 +102,8 @@ module.exports = function (app, db) {
                     "listing": req.listing
                 })
             })
-            .catch((req) => {
-                customErrorLogger.logServerError(res, req.error, "Listing Fetch Error")
+            .catch((error) => {
+                customErrorLogger.logServerError(res, error, "Listing Fetch Error")
             })
     });
 

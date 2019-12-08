@@ -39,10 +39,10 @@ module.exports = (app, db) => {
                     'message': 'User Created',
                     'user_token': req.userData.userToken
                 })
-            }).catch((req) => {
-                customErrorLogger.logServerError(res, req.error, 'User Create Error')
+            }).catch((error) => {
+                customErrorLogger.logServerError(res, error, 'User Create Error')
                 db.query(`DELETE FROM user_profile WHERE userID = '${req.userData.userID}'`,
-                    (error) => {
+                    (errorCB) => {
                         console.log('User Clean up Success')
                     })
             })
@@ -98,11 +98,11 @@ module.exports = (app, db) => {
                     "message": 'Wanted Tags Changed Successfully'
                 })
             })
-            .catch((req) => {
-                console.log('Tag Change Error (', req.error.details, ')', req.error.message);
+            .catch((error) => {
+                console.log('Tag Change Error (', error.details, ')', error.message);
                 res.status(500).json({
                     "message": 'Server Error',
-                    "error": req.error
+                    "error": error
                 })
             })
     });

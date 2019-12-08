@@ -68,6 +68,11 @@ module.exports = function (app, db) {
     });
 
     app.get('/getListingNoAuth', (req, res) => {
+
+        if(req.query.listingID == null){
+            customErrorLogger.logUserError(res,"listing id is not defined",404)
+        }
+
         req.db = db
         listingPromises.getListing(req)
             .then(listingPromises.getListingItems)

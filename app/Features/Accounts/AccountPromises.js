@@ -1,4 +1,6 @@
 
+const Auth = require('../Authentication/AuthenticationHelper');
+
 exports.changeWantedTags = req => new Promise((resolve, reject) => {
     // find which tags to add and which to remove
     req.body.nee_tags

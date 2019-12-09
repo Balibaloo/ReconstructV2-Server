@@ -3,6 +3,7 @@ const listingPromises = require('./ListingsPromises')
 const Auth = require('../Authentication/AuthenticationHelper');
 const imagePromises = require('../Images/imageHandler')
 const customQueue = require('../../helpers/romansQueue')
+const DEBUG = require("../../../StartServer").DEBUG
 
 var arrayToSQL = (arr) => {
     //// converts an array to an SQL insertable format String
@@ -52,9 +53,10 @@ module.exports = function (app, db) {
             .then(listingPromises.insertItemTags)
             .then((req) => {
                 console.log('Listing Saved sucsessfully')
+                if (DEBUG.values) {console.log("ListingID = " + req.userData.listingID)}
                 res.json({
                     "message": 'Listing Saved Successfully',
-                    "listingID": req.listingID
+                    "listingID": req.userData.listingID
                 })
             })
             .catch((error) => {
@@ -69,9 +71,9 @@ module.exports = function (app, db) {
 
     app.get('/getListingNoAuth', (req, res) => {
 
-        if(req.query.listingID == null){
+        if(!req.query.listingID){
             customErrorLogger.logUserError(res,"listing id is not defined",404)
-        }
+        } else {
 
         req.db = db
         listingPromises.getListing(req)
@@ -88,6 +90,7 @@ module.exports = function (app, db) {
             .catch((err) => {
                 customErrorLogger.logServerError(res, err, "Listing Could not be Fetched")
             })
+        }
     });
 
     app.get('/auth/getListing', Auth.checkToken, (req, res) => {
@@ -175,7 +178,7 @@ module.exports = function (app, db) {
         // checks if user has provided an integer page number to load
         const listingsPerPage = 10
 
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
 
         let sql = `SELECT * 
                 FROM listing 
@@ -211,9 +214,9 @@ module.exports = function (app, db) {
 
     app.get('/getFilteredListings', (req, res) => {
         const listingsPerPage = 10
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
 
-        searchStringArr = req.body.searchString.split(" ")
+        searchStringArr = req.query.searchString.split(" ")
         searchStringArr = pruneNonTagsfrom(searchStringArr)
 
         let sql = `SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
@@ -241,7 +244,7 @@ module.exports = function (app, db) {
   
     app.get('/getDesiredItems', (req, res) => {
         const listingsPerPage = 10
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
 
         let sql = `SELECT * FROM tags
         JOIN (SELECT count(userID), tagID FROM wanted_tags

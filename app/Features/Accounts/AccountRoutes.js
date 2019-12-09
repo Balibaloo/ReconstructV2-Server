@@ -29,6 +29,7 @@ module.exports = (app, db) => {
         // phone
         //}
 
+
         req.db = db
         accountPromises.saveUserPromise(req)
             .then(Auth.saveUser)
@@ -74,7 +75,7 @@ module.exports = (app, db) => {
     app.get('/getUserProfile', (req, res) => {
         db.query(`SELECT *
                 FROM user_profile
-                WHERE userID = '${req.body.userID}' `, function (error, result) {
+                WHERE userID = '${req.query.userID}' `, function (error, result) {
             if (error) {
                 customErrorLogger.logServerError(res, error, "Get User Error")
             } else if (result[0]) {
@@ -115,7 +116,7 @@ module.exports = (app, db) => {
 
     app.get('/checkUniqueUsername', (req, res) => {
         //// requires body.username
-        Auth.checkUniqueUsername(req.body.username).then((isUnique) => {
+        Auth.checkUniqueUsername(req.query.username).then((isUnique) => {
             res.json({
                 "message": isUnique ? 'username available' : "username is already in use",
                 "is_unused": isUnique
@@ -127,7 +128,7 @@ module.exports = (app, db) => {
 
     app.get('/checkUniqueEmail', (req, res) => {
         //// requires body.email
-        checkUniqueEmail(db, req.body.email)
+        checkUniqueEmail(db, req.query.email)
             .then((isUnique) => {
                 res.json({
                     "message": isUnique ? "email is available" : 'email is already in use',

@@ -4,11 +4,11 @@ const uniqueID = require('uniqid')
 
 exports.getListing = req => new Promise((resolve, reject) => {
     //// retreives a Listing entry from databse given listingID
-    // needs req.body.listingID
+    // needs req.query.listingID
 
     req.db.query(`SELECT *
                 FROM listing
-                WHERE listingID = ?`, [req.body.listingID], (error, results) => {
+                WHERE listingID = ?`, [req.query.listingID], (error, results) => {
         if (error) {
             
             error.details = 'select listing'
@@ -20,7 +20,7 @@ exports.getListing = req => new Promise((resolve, reject) => {
             resolve(req)
         } else {
             error = new Error('no listing found')
-            error.details = 'no listing found, id = ' + req.body.listingID
+            error.details = 'no listing found, id = ' + req.query.listingID
             reject(error)
         }
 
@@ -29,12 +29,12 @@ exports.getListing = req => new Promise((resolve, reject) => {
 
 exports.getUserListings = req => new Promise((resolve, reject) => {
     //// retreives a Listing entry from databse given listingID
-    // needs req.body.listingID and req.userData.userID (added during Auth.checkToken)
+    // needs req.query.listingID and req.userData.userID (added during Auth.checkToken)
     const sql = `SELECT *
     FROM listing
     WHERE listingID = ?
     AND authorID = ?`
-    req.db.query(sql, [req.body.listingID, req.userData.userID], (error, results) => {
+    req.db.query(sql, [req.query.listingID, req.userData.userID], (error, results) => {
         if (error) {
             
             error.details = 'select listing'
@@ -55,10 +55,10 @@ exports.getUserListings = req => new Promise((resolve, reject) => {
 
 exports.getListingItems = req => new Promise((resolve, reject) => {
     //// retreives every listing_item associated with a listingID from database
-    // needs req.body.listingID
+    // needs req.query.listingID
     req.db.query(`SELECT *
                 FROM listing_item WHERE listingID = ?
-                `, [req.body.listingID], (error, results) => {
+                `, [req.query.listingID], (error, results) => {
         if (error) {
             
             error.details = 'listing fetch error'
@@ -146,12 +146,12 @@ exports.insertMainListing = req => new Promise((resolve, reject) => {
             end_date,
             location,
             main_photo
-        } = req.body
+        } = req.query
 
         var listingID = idOne
         var authorID = req.userData.userID
 
-        req.listingID = listingID
+        req.userData.listingID = listingID
 
         db.query(`INSERT INTO listing
         (listingID, authorID, title, body, main_photo, end_date, location)
@@ -172,7 +172,7 @@ exports.insertMainListing = req => new Promise((resolve, reject) => {
 
 exports.insertListingItems = req => new Promise((resolve, reject) => {
     db = req.db
-    listingID = req.listingID
+    listingID = req.userData.listingID
     itemList = req.body.item_list.map((item) => {
         item.itemID = uniqueID()
         return item
@@ -207,8 +207,8 @@ exports.insertNewTags = req => new Promise((resolve, reject) => {
         })
     })
 
-    req.body.tagNameArray = Array.from(tagSet)
-    let nestedTagArr = req.body.tagNameArray.map((item) => { return [item] })
+    req.query.tagNameArray = Array.from(tagSet)
+    let nestedTagArr = req.query.tagNameArray.map((item) => { return [item] })
 
     // if tag doesent exist, insert it
     let sql = `INSERT IGNORE INTO tags (tagName) VALUES ? `
@@ -226,7 +226,7 @@ exports.insertNewTags = req => new Promise((resolve, reject) => {
 exports.replaceTagsWithIDs = req => new Promise((resolve, reject) => {
     let sql = `SELECT * FROM tags WHERE tagName IN (?)`
 
-    req.db.query(sql, [req.body.tagNameArray], (error, results) => {
+    req.db.query(sql, [req.query.tagNameArray], (error, results) => {
         if (error) {
             reject(error)
         } else {
@@ -255,12 +255,12 @@ var tagResultListToDicionary = (tagDataList) => {
 
 exports.insertItemTags = req => new Promise((resolve, reject) => {
     itemList = req.body.item_list
-    tagArr = req.body.tagArray
+    tagArr = req.query.tagArray
 
     finalTagArray = []
     itemList.forEach((item) => {
         tags = item.tags
-        tags.forEach((tagID) => { finalTagArray.push([tagID, item.itemID, req.listingID]) })
+        tags.forEach((tagID) => { finalTagArray.push([tagID, item.itemID, req.userData.listingID]) })
     })
 
     let sql = `INSERT INTO listing_item_tags (TagID,listingItemID,listingID) VALUES ?`
@@ -300,10 +300,10 @@ exports.insertImageIds = req => new Promise((resolve, reject) => {
 });
 
 exports.checkUserIsAuthor = req => new Promise((resolve, reject) => {
-    console.log(req.body.listingID)
+    console.log(req.query.listingID)
     let sql = `SELECT authorID FROM listing WHERE listingID = ?`
 
-    req.db.query(sql, [req.body.listingID], (error, result) => {
+    req.db.query(sql, [req.query.listingID], (error, result) => {
         if (error) {
             reject(error)
         } else if (result[0]) {
@@ -320,7 +320,7 @@ exports.checkUserIsAuthor = req => new Promise((resolve, reject) => {
 })
 
 exports.deleteListing = req => new Promise((resolve, reject) => {
-    req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.body.listingID], (error) => {
+    req.db.query(`DELETE FROM listing WHERE listingID = ?`, [req.query.listingID], (error) => {
         if (error) {
             reject(error)
         } else {

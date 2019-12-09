@@ -29,7 +29,7 @@ exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
                 FROM listing_item_images WHERE temporaryID = ?
                 ORDER BY isSaved DESC`
 
-    req.db.query(sql, [req.body.imageID], (error, result) => {
+    req.db.query(sql, [req.query.imageID], (error, result) => {
         if (error) {
             reject(error)
         } else if (result[0]) {
@@ -43,7 +43,7 @@ exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
 });
 
 exports.sendImageFile = (req, res) => {
-    imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.body.imageID
+    imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.query.imageID
     message = req.myArgs.usedWrongID ? "Please Use New ID" : "Successfully fetched"
 
     imagePath = genImagePath(imageID)
@@ -54,7 +54,7 @@ exports.sendImageFile = (req, res) => {
 
 exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
     db = req.db
-    tempImageId = req.body.temp_imageID
+    tempImageId = req.query.temp_imageID
     let sql = `SELECT * FROM listing_item_images 
                 WHERE temporaryID = ? `
     db.query(sql, [tempImageId], (error, result) => {
@@ -76,13 +76,13 @@ exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
 })
 
 exports.saveImagetoDB = req => new Promise((resolve, reject) => {
-    req.body.newID = uniqueID()
+    req.query.newID = uniqueID()
 
     let sql = `UPDATE listing_item_images
                 SET imageID = ? , isSaved = 1
                 WHERE temporaryID = ?`
 
-    req.db.query(sql, [req.body.newID, req.body.temp_imageID], (error, result) => {
+    req.db.query(sql, [req.query.newID, req.query.temp_imageID], (error, result) => {
         if (error) { reject(error) }
         else { resolve(req) }
     })
@@ -97,7 +97,7 @@ exports.fetchImageIDs = req => new Promise((resolve, reject) => {
                     FROM listing_item 
                     WHERE listingID = ? )`
 
-    req.db.query(sqlSelect, [req.body.listingID], (error, result) => {
+    req.db.query(sqlSelect, [req.query.listingID], (error, result) => {
         if (error) {
             reject(error)
         } else if (result[0]) {

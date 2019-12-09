@@ -10,7 +10,7 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         imagePromises.saveImagetoDB(req)
-            .then((req) => { cb(null, req.body.newID + path.extname(file.originalname)) })
+            .then((req) => { cb(null, req.query.newID + path.extname(file.originalname)) })
     }
 })
 
@@ -51,7 +51,7 @@ const getAuthorFromImageID = req => new Promise((resolve, reject) => {
                 (SELECT listingID FROM listing_item WHERE listingItemID IN
                 (SELECT listingItemID FROM listing_item_images WHERE imageID = ? OR temporaryID = ?))
                 `
-    req.db.query(sql, [req.body.temp_imageID, req.body.temp_imageID], (error, results) => {
+    req.db.query(sql, [req.query.temp_imageID, req.query.temp_imageID], (error, results) => {
         if (error) {
             reject(error)
         } else if (results[0]) {
@@ -94,7 +94,7 @@ module.exports =(app, db) => {
         } else if (req.saveSuccessful) {
             res.json({
                 "message": "image saved successfuly",
-                "imageID": req.body.newID
+                "imageID": req.query.newID
             })
         }
     });

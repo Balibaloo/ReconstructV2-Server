@@ -3,7 +3,7 @@ const Auth = require('../Authentication/AuthenticationHelper');
 
 exports.changeWantedTags = req => new Promise((resolve, reject) => {
     // find which tags to add and which to remove
-    req.body.nee_tags
+    req.query.new_tags
     resolve(req)
 })
 
@@ -17,12 +17,12 @@ exports.setEmailVerified = req => new Promise((resolve, reject) => {
 })
 
 exports.saveUserPromise = req => new Promise((resolve, reject) => {
-    req.userData = req.body
+    req.userData = req.query
     Auth.genID((userID) => {
         req.userData.userID = userID
         req.db.query(`INSERT INTO user_profile (userID, fName, lName, email, phone)
                     VALUES ?`,
-            [[req.userData.userID, req.userData.first_name, req.userData.last_name, req.userData.email, req.userData.phone]],
+            [[[req.userData.userID, req.userData.first_name, req.userData.last_name, req.userData.email, req.userData.phone]]],
             (error, result) => {
                 if (error) {
                     

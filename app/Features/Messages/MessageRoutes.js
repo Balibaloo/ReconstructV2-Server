@@ -7,7 +7,7 @@ module.exports =function (app, db) {
             let sql = `INSERT INTO message_history
                         (messageID,senderID,targetID,title,body)
                         VALUES ?`
-            db.query(sql, [[messageID, req.userData.userID, req.body.targetID, req.body.title, req.body.body]], (error, results) => {
+            db.query(sql, [[messageID, req.userData.userID, req.query.targetID, req.query.title, req.query.body]], (error, results) => {
                 if (error) {
                     logServerError(res, error, "Send Message Error")
                 } else {

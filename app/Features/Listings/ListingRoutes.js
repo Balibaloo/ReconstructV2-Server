@@ -5,19 +5,6 @@ const imagePromises = require('../Images/imageHandler')
 const customQueue = require('../../helpers/romansQueue')
 const DEBUG = require("../../../StartServer").DEBUG
 
-var arrayToSQL = (arr) => {
-    //// converts an array to an SQL insertable format String
-    finalString = ""
-    arr.forEach((item, index) => {
-        if (index !== 0) {
-            finalString += ' ,'
-        }
-        finalString += `'${item}'`
-    })
-    return finalString
-
-};
-
 var pruneNonTagsfrom = (tagList) => {
     const tagsToFilter = []
     tagList = tagList.filter((value) => {
@@ -71,6 +58,8 @@ module.exports = function (app, db) {
 
     app.get('/getListingNoAuth', (req, res) => {
 
+        if (DEBUG.debug){console.log("=====GET LISTING NO AUTH=====")}
+
         if(!req.query.listingID){
             customErrorLogger.logUserError(res,"listing id is not defined",404)
         } else {
@@ -97,6 +86,8 @@ module.exports = function (app, db) {
         req.db = db
 
         /// need to replace image ids with loaded images
+        if (DEBUG.debug){console.log("=====GET LISTING AUTH=====")}
+        if (DEBUG.values){console.log("userID = " + req.userData.userID)}
 
         listingPromises.getListing(req)
             .then(listingPromises.getListingItems)
@@ -216,15 +207,15 @@ module.exports = function (app, db) {
         const listingsPerPage = 10
         let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
 
-        searchStringArr = req.query.searchString.split(" ")
-        searchStringArr = pruneNonTagsfrom(searchStringArr)
+        searchStringArray = req.query.searchString.split(" ")
+        searchStringArray = pruneNonTagsfrom(searchStringArray)
 
         let sql = `SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
             FROM listing_item_tags
             WHERE tagID 
-            IN (SELECT tagID FROM tags WHERE tagName IN (${arrayToSQL(searchStringArr)}))) ORDER BY isActive DESC LIMIT ?, ?`
+            IN (SELECT tagID FROM tags WHERE tagName IN (?))) ORDER BY isActive DESC LIMIT ?, ?`
 
-        db.query(sql, [pageOffset, listingsPerPage],
+        db.query(sql, [searchStringArray,pageOffset, listingsPerPage],
             (error, results) => {
                 if (error) {
                     customErrorLogger.logServerError(res, error, 'Filter listing error')

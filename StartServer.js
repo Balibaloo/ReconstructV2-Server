@@ -2,6 +2,8 @@ const bodyParser = require('body-parser'); // parses incoming JSON data
 const app = require('express')(); // initialise the application framework
 const mysql = require('mysql'); // sql connection manager
 
+// debugging options
+module.exports.DEBUG = {debug: true, values: true}
 
 const port = 1234;
 const dbhost = "localhost";

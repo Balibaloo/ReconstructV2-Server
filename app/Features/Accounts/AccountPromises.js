@@ -35,3 +35,35 @@ exports.saveUserPromise = req => new Promise((resolve, reject) => {
             })
     });
 });
+
+exports.getUserProfile = req => new Promise((resolve, reject) => {
+    let sql = `SELECT *
+        FROM user_profile
+        WHERE userID = ?`
+        
+        req.db.query(sql ,req.query.userID, (error, result) => {
+            if (error) {
+                reject(error,"server")
+            } else if (result[0]) {
+                delete result[0].userID
+                resolve(result[0])
+            } else {
+                error = {message : "No User Found", code : 404}
+                reject(error)
+            };
+
+        });
+
+});
+
+exports.deleteUser = userID => new Promise((resolve, reject) => {
+    let sql =`DELETE FROM user_profile WHERE userID = ?`
+    db.query(sql,userID,
+        (error) => {
+            if (error) {
+                reject(error)
+            } else {
+                resolve()
+            }
+        })
+})

@@ -34,7 +34,7 @@ const fileSaveFilter = (req, file, cb) => {
         })
 }
 
-var checkUserIsAuthor = (req) => new Promise((resolve, reject) => {
+var checkUserIsAuthor = req => new Promise((resolve, reject) => {
     getAuthorFromImageID(req)
         .then((req) => {
             if (req.userData.userID == req.listingAuthorID) {
@@ -46,7 +46,7 @@ var checkUserIsAuthor = (req) => new Promise((resolve, reject) => {
         }).catch((error) => { reject(error) })
 });
 
-const getAuthorFromImageID = (req) => new Promise((resolve, reject) => {
+const getAuthorFromImageID = req => new Promise((resolve, reject) => {
     let sql = `SELECT authorID FROM listing WHERE listingID IN
                 (SELECT listingID FROM listing_item WHERE listingItemID IN
                 (SELECT listingItemID FROM listing_item_images WHERE imageID = ? OR temporaryID = ?))
@@ -69,17 +69,22 @@ const upload = multer({ storage: storage, fileFilter: fileSaveFilter })
 module.exports = (app, db) => {
 
     app.get("/getImage", (req, res) => {
-        imagePromises.sendImage(db, res, req.query.imageID)
-            .catch((error) => {
-                if (!error) {
-                    customErrors.logUserError(res, "Image Doesent Exist", 404)
-                } else customErrors.logServerError(res, error)
+        req.db = db
+        req.myArgs = {}
+
+
+        imagePromises.checkFileExists(req)
+            .then(imagePromises.checkUserUsedWrongID)
+            .then((req) => imagePromises.sendImageFile(req, res))
+            .catch((error, type = "server") => {
+                if (type == "user") { customErrors.logUserError(res) }
+                else if (type == "server") { customErrors.logServerError(res, error, error.message) }
+
             })
     })
 
     app.post("/auth/saveImage", Auth.checkToken, (req, res, next) => { req.db = db; next() }, upload.single("image"), (req, res) => {
         if (req.error) {
-            console.log(req.error)
             customErrors.logUserError(res, req.error.message, 404)
         } else if (!req.saveSuccessful) {
             res.json({

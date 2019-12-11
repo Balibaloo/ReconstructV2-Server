@@ -15,7 +15,7 @@ var authServer = mysql.createConnection({
     database: dbName,
 });
 
-module.exports.decodeIncomingUP = (req) => new Promise((resolve, reject) => {
+module.exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
     req.userData = {}
     authCreds = req.headers.authorization.split(' ');
     decodedCreds = Buffer.from(authCreds[1], 'base64').toString().split(':');
@@ -62,7 +62,7 @@ module.exports.checkToken = (req, res, next) => {
     };
 };
 
-module.exports.clientEncode = (req) => new Promise((resolve, reject) => {
+module.exports.clientEncode = req => new Promise((resolve, reject) => {
     //// temporary function to act as the client side ecoding for authentication purpouses
     var MasterSalt = '$2b$10$BjJdSB802DiH35SVuhITvO'
     var tohash = req.userData.password + req.userData.username
@@ -72,12 +72,13 @@ module.exports.clientEncode = (req) => new Promise((resolve, reject) => {
             req.error.details = 'Hash Error'
             reject(req)
         } else {
+            req.userData.password = result
             resolve(req)
         }
     })
 });
 
-module.exports.checkUP = (req) => new Promise((resolve, reject) => {
+module.exports.checkUP = req => new Promise((resolve, reject) => {
     //// checks username and password on login
 
     authServer.query(`SELECT salt,password,userID
@@ -118,7 +119,7 @@ module.exports.checkUP = (req) => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.saveUser = (req) => new Promise((resolve, reject) => {
+module.exports.saveUser = req => new Promise((resolve, reject) => {
     //// saves user into security databse
     bcrypt.genSalt(16, (error, salt) => {
         bcrypt.hash(req.userData.password, salt, (error, password) => {
@@ -149,7 +150,7 @@ module.exports.saveUser = (req) => new Promise((resolve, reject) => {
     })
 });
 
-module.exports.createNewToken = (req) => new Promise((resolve, reject) => {
+module.exports.createNewToken = req => new Promise((resolve, reject) => {
     //// given a userID it creates and saves a new acces token
     authServer.query(`SELECT * FROM alltokens
         WHERE userID = ?
@@ -226,7 +227,7 @@ module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolv
 
 });
 
-module.exports.verifyEmailVerificationCode = (req) => new Promise((resolve, reject) => {
+module.exports.verifyEmailVerificationCode = req => new Promise((resolve, reject) => {
     req.userData = {}
     req.userData.username = req.query.username
     verificationCode = req.query.verification

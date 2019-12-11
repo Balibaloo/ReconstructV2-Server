@@ -7,5 +7,21 @@ module.exports = function (app, db) {
     require('./Features/Messages/MessageRoutes')(app, db);
     require('./Features/Emails/EmailRoutes')(app, db);
     require('./Features/Images/ImageRoutes')(app, db);
-
 }
+
+/*
+FUNCTION BREAKDOWN
+Accounts:
+
+
+Connection Test:
+    Route : /
+    Needs : nothing
+    Sends : connection succesfull message
+
+    Route : /auth/
+    Needs : authentication token
+    Sends : mesage on if authentication is succesfull
+
+
+*/

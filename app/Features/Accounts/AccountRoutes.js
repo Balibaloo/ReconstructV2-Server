@@ -42,25 +42,25 @@ module.exports = (app, db) => {
                 })
             }).catch((error) => {
                 customErrorLogger.logServerError(res, error, 'User Create Error')
-                db.query(`DELETE FROM user_profile WHERE userID = '${req.userData.userID}'`,
-                    (errorCB) => {
-                        console.log('User Clean up Success')
-                    })
+                accountPromises.deleteUser(req.userData.userID)
+                    .then(console.log("user cleaned up succesfully"))
+                    .catch(console.log)
             })
     });
 
     app.get('/auth/login', (req, res) => {
 
         if (req.headers.authorisation) {
-
             Auth.decodeIncomingUP(req)
                 .then(Auth.checkUP)
                 .then(Auth.createNewToken)
                 .then((req) => {
                     res.json({
                         'message': 'Logged in succesfully',
-                        'userToken': req.userData.userToken
+                        'userToken': req.userData.userToken,
+                        "userID" : req.userData.userID
                     })
+                    console.log("Sent User Token")
                 }).catch((error) => {
                     console.log('Log in error (', error.details, ')', error);
                     customErrorLogger.logServerError(res, error, "Login Error")
@@ -73,22 +73,21 @@ module.exports = (app, db) => {
     });
 
     app.get('/getUserProfile', (req, res) => {
-        db.query(`SELECT *
-                FROM user_profile
-                WHERE userID = '${req.query.userID}' `, function (error, result) {
-            if (error) {
-                customErrorLogger.logServerError(res, error, "Get User Error")
-            } else if (result[0]) {
-                delete result[0].userID
-                res.status(200).json({
-                    "message": "Profile Fetches Succesfully",
-                    "userProfile": result[0]
-                })
-            } else {
-                customErrorLogger.logUserError(res, "No User Found", 404)
-            };
+        req.db = db
 
-        });
+        accountPromises.getUserProfile(req)
+            .then(user => {
+                res.status(200).json({
+                "message": "Profile Fetched Succesfully",
+                "userProfile": user})
+                console.log("user profile fetched, id = ", user.userID)
+            })
+            .catch((error, type) => {
+                if (type == "server"){
+                customErrorLogger.logServerError(res, error, "Get User Error")}
+            else if (type == "user"){
+                customErrorLogger.logUserError(res, error.message, error.code)
+            }})
     });
 
     app.get('/auth/changeWantedTags', Auth.checkToken, (req, res) => {

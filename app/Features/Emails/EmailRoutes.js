@@ -1,7 +1,7 @@
 const accountPromises = require('../Accounts/AccountPromises');
 const Auth = require('../Authentication/AuthenticationHelper')
 
-exports = (app, db) => {
+module.exports = (app, db) => {
     app.get('/verifyEmail', (req, res) => {
         req.db = db
         Auth.verifyEmailVerificationCode(req)

@@ -13,7 +13,6 @@ module.exports.checkFileExists = req => new Promise((resolve, reject) => {
     fs.access(imagePath, fs.F_OK, (err) => {
         if (err) {
             if (err.message.slice(0, 6) === 'ENOENT') {
-<<<<<<< HEAD
                 // same as check image is saved
                 let sql = "SELECT * FROM listing_item_images WHERE temporaryID = ?"
                 db.query(sql, [image_name], (error, result) => {
@@ -38,7 +37,7 @@ module.exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
                 FROM listing_item_images WHERE temporaryID = ?
                 ORDER BY isSaved DESC`
 
-    req.db.query(sql, [req.body.imageID], (error, result) => {
+    req.db.query(sql, [req.query.imageID], (error, result) => {
         if (error) {
             reject(error)
         } else if (result[0]) {
@@ -52,7 +51,7 @@ module.exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
 });
 
 module.exports.sendImageFile = (req, res) => {
-    imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.body.imageID
+    imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.query.imageID
     message = req.myArgs.usedWrongID ? "Please Use New ID" : "Successfully fetched"
 
     imagePath = genImagePath(imageID)
@@ -119,7 +118,7 @@ module.exports.fetchImageIDs = req => new Promise((resolve, reject) => {
     })
 })
 
-exports.deleteImages = req => new Promise((resolve, reject) => {
+module.exports.deleteImages = req => new Promise((resolve, reject) => {
     if (req.imageIDstoDelete == "empty") {
         console.log('no images to delete')
         resolve(req)

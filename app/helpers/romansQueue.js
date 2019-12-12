@@ -28,4 +28,4 @@ class romansQueue {
     }
 }
 
-exports.customQueue = romansQueue;
+module.exports.customQueue = romansQueue;

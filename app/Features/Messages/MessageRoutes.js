@@ -1,7 +1,7 @@
 const Auth = require('../Authentication/AuthenticationHelper');
 const customErrors = require('../../helpers/CustomErrors')
 
-exports = (app, db) => {
+module.exports = (app, db) => {
     app.post('/sendMessage', Auth.checkToken, (req, res) => {
         Auth.genID((messageID) => {
             let sql = `INSERT INTO message_history

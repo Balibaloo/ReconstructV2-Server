@@ -16,7 +16,7 @@ var authServer = mysql.createConnection({
     database: dbName,
 });
 
-exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
+module.exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
     if (DEBUG.debug){console.log("==B64 Decoding==")}
 
     req.userData = {}
@@ -31,7 +31,7 @@ exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
     resolve(req)
 })
 
-exports.checkToken = (req, res, next) => {
+module.exports.checkToken = (req, res, next) => {
     if (DEBUG.debug){console.log("==Checking Token==")}
     //// middleware that checks if the token provided with a request is valid
 
@@ -72,7 +72,7 @@ exports.checkToken = (req, res, next) => {
     };
 };
 
-exports.checkUP = req => new Promise((resolve, reject) => {
+module.exports.checkUP = req => new Promise((resolve, reject) => {
     //// checks username and password on login
 
     if (DEBUG.debug){console.log("==Checking Username Password==")}
@@ -121,7 +121,7 @@ exports.checkUP = req => new Promise((resolve, reject) => {
     })
 });
 
-exports.saveUser = req => new Promise((resolve, reject) => {
+module.exports.saveUser = req => new Promise((resolve, reject) => {
     if (DEBUG.debug){console.log("==Saving User Auth==")}
     //// saves user into security databse
 
@@ -153,7 +153,7 @@ exports.saveUser = req => new Promise((resolve, reject) => {
     })
 });
 
-exports.createNewToken = req => new Promise((resolve, reject) => {
+module.exports.createNewToken = req => new Promise((resolve, reject) => {
     //// given a userID it creates and saves a new acces token
     if (DEBUG.debug){console.log("==Creating New Acces Token==")}
     // check if any active tokens exist
@@ -206,7 +206,7 @@ var invalidateAllTokens = (userID) => {
     })
 };
 
-exports.checkUniqueUsername = (username) => new Promise((resolve, reject) => {
+module.exports.checkUniqueUsername = (username) => new Promise((resolve, reject) => {
     //// checks if a username is already saved in the database
 
     if (DEBUG.debug){console.log("==Checking Username Uniqueue==")}
@@ -241,7 +241,7 @@ module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolv
 
 });
 
-exports.verifyEmailVerificationCode = req => new Promise((resolve, reject) => {
+module.exports.verifyEmailVerificationCode = req => new Promise((resolve, reject) => {
     // checks if given email verrification code exists in database
 
     if (DEBUG.debug){console.log("==Checking Email Verrification==")}
@@ -270,7 +270,7 @@ exports.verifyEmailVerificationCode = req => new Promise((resolve, reject) => {
 
 });
 
-exports.getUsername = (userID) => new Promise((resolve, reject) => {
+module.exports.getUsername = (userID) => new Promise((resolve, reject) => {
     // fetches username given userID
 
     if (DEBUG.debug){console.log("==Fetching Username==")}
@@ -285,7 +285,7 @@ exports.getUsername = (userID) => new Promise((resolve, reject) => {
     });
 });
 
-exports.genID = (callback) => {
+module.exports.genID = (callback) => {
     //// callback that generates new ID
     callback(uniqueID())
 };

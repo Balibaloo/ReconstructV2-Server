@@ -167,8 +167,7 @@ module.exports = function (app, db) {
 
     app.get('/getFrontPageListings', (req, res) => {
         // checks if user has provided an integer page number to load
-        const listingsPerPage = req.body.listingsPerPage
-
+        const listingsPerPage = req.query.listingsPerPage
         let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
 
         let sql = `SELECT *
@@ -236,8 +235,8 @@ module.exports = function (app, db) {
     });
 
     app.get('/auth/getRecentListings', Auth.checkToken, (req, res) => {
-        const listingsPerPage = req.body.listingsPerPage
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.body.pageNum)
+        const listingsPerPage = req.query.listingsPerPage
+        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
 
         let sql = `SELECT *
         FROM listing
@@ -265,7 +264,7 @@ module.exports = function (app, db) {
                 })
             }
         })
-    });const listingsPerPage = req.body.listingsPerPage
+    });
 
     app.get('/getDesiredItems', (req, res) => {
         const listingsPerPage = 10

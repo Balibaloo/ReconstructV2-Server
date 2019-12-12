@@ -5,7 +5,7 @@ var genImagePath = (image_name) => {
     return path.join(__dirname, "../../../ImageStorage/" + image_name + ".jpg")
 }
 
-exports.checkFileExists = req => new Promise((resolve, reject) => {
+module.exports.checkFileExists = req => new Promise((resolve, reject) => {
     req.myArgs.usedWrongID = false
 
     let imagePath = genImagePath(req.query.imageID)
@@ -13,8 +13,17 @@ exports.checkFileExists = req => new Promise((resolve, reject) => {
     fs.access(imagePath, fs.F_OK, (err) => {
         if (err) {
             if (err.message.slice(0, 6) === 'ENOENT') {
-                req.myArgs.usedWrongID = true
-                resolve(req)
+<<<<<<< HEAD
+                // same as check image is saved
+                let sql = "SELECT * FROM listing_item_images WHERE temporaryID = ?"
+                db.query(sql, [image_name], (error, result) => {
+                    if (error) {
+                        reject(error)
+                    } else if (result[0]) {
+                        sendImagedaw(res, result[0].imageID, "Please use new Image ID", result[0].imageID)
+                        resolve()
+                    } else { reject() }
+                })
             } else { reject(err) }
         } else {
             resolve(req)
@@ -22,14 +31,14 @@ exports.checkFileExists = req => new Promise((resolve, reject) => {
     })
 });
 
-exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
+module.exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
     if (!req.myArgs.usedWrongID) { resolve(req) }
 
     let sql = `SELECT imageID, isSaved
                 FROM listing_item_images WHERE temporaryID = ?
                 ORDER BY isSaved DESC`
 
-    req.db.query(sql, [req.query.imageID], (error, result) => {
+    req.db.query(sql, [req.body.imageID], (error, result) => {
         if (error) {
             reject(error)
         } else if (result[0]) {
@@ -42,8 +51,8 @@ exports.checkUserUsedWrongID = req => new Promise((resolve, reject) => {
     })
 });
 
-exports.sendImageFile = (req, res) => {
-    imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.query.imageID
+module.exports.sendImageFile = (req, res) => {
+    imageID = req.myArgs.usedWrongID ? req.myArgs.actualImageID : req.body.imageID
     message = req.myArgs.usedWrongID ? "Please Use New ID" : "Successfully fetched"
 
     imagePath = genImagePath(imageID)
@@ -52,7 +61,7 @@ exports.sendImageFile = (req, res) => {
     res.sendFile(imagePath)
 }
 
-exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
+module.exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
     db = req.db
     tempImageId = req.query.temp_imageID
     let sql = `SELECT * FROM listing_item_images 
@@ -75,7 +84,7 @@ exports.checkImageIsSaved = req => new Promise((resolve, reject) => {
     })
 })
 
-exports.saveImagetoDB = req => new Promise((resolve, reject) => {
+module.exports.saveImagetoDB = req => new Promise((resolve, reject) => {
     req.query.newID = uniqueID()
 
     let sql = `UPDATE listing_item_images
@@ -89,12 +98,12 @@ exports.saveImagetoDB = req => new Promise((resolve, reject) => {
 
 })
 
-exports.fetchImageIDs = req => new Promise((resolve, reject) => {
+module.exports.fetchImageIDs = req => new Promise((resolve, reject) => {
     let sqlSelect = `SELECT imageID FROM listing_item_images WHERE
                 isSaved = 1 AND
                 listingItemID IN
-                (SELECT listingItemID 
-                    FROM listing_item 
+                (SELECT listingItemID
+                    FROM listing_item
                     WHERE listingID = ? )`
 
     req.db.query(sqlSelect, [req.query.listingID], (error, result) => {

@@ -1,8 +1,3 @@
-const imagePromises = require('./imageHandler');
-const customErrors = require('../../helpers/CustomErrors');
-const Auth = require('../Authentication/AuthenticationHelper');
-path = require('path');
-var multer = require('multer');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {

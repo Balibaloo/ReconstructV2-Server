@@ -1,5 +1,19 @@
 
 
+<<<<<<< HEAD
+module.exports = () => {
+    tempRoutine()
+
+}
+
+// create custom que class to handle sending emails
+
+var tempRoutine = (num) => {
+    setInterval(() => {
+        console.log("routine running")
+    }, 500);
+}
+=======
 module.exports = (db) => {
     checkForListingUpdates(db)
     //setTimeout(() => checkForListingUpdates(db), 1000 * 10)
@@ -29,3 +43,4 @@ var checkForListingUpdates = (db) => new Promise((resolve, reject) => {
 
     })
 })
+>>>>>>> c466cebb26d7190fa177b8ebad26de1758460c1b

@@ -42,8 +42,8 @@ exports.checkToken = (req, res, next) => {
         // checks if the rihght type of authentication is used
         if (authCreds[0] == 'Bearer') {
             const userToken = authCreds[1];
-            
-            authServer.query(`SELECT * FROM alltokens WHERE Token = '${userToken}' AND isValid = 1`,
+
+            authServer.query(`SELECT * FROM alltokens WHERE Token = ?`,userToken,
                 (error, result) => {
                     // check if the token matches an active one in the database
                     if (error) {
@@ -80,7 +80,9 @@ exports.checkUP = req => new Promise((resolve, reject) => {
 
 
     // fetches the user account on username
-    authServer.query(`SELECT salt,password,userID FROM login_credentials WHERE username = '${req.userData.username}'`, (error, user) => {
+    authServer.query(`SELECT salt,password,userID
+                        FROM login_credentials
+                        WHERE username = ?`,req.userData.username, (error, user) => {
         user = user[0]
         if (error) {
             error = error
@@ -131,7 +133,10 @@ exports.saveUser = req => new Promise((resolve, reject) => {
                 reject(error)
 
             } else {
-                authServer.query(`INSERT INTO login_credentials (userID, username, password, salt) VALUES ('${req.userData.userID}', '${req.userData.username}', '${password}', '${salt}')`,
+                authServer.query(`INSERT INTO login_credentials
+                                (userID, username, password, salt)
+                                VALUES ?`,
+                                [[req.userData.userID,req.userData.username,password,salt]],
                     (error) => {
                         if (error) {
                             error.details = 'Saving'
@@ -153,8 +158,8 @@ exports.createNewToken = req => new Promise((resolve, reject) => {
     if (DEBUG.debug){console.log("==Creating New Acces Token==")}
     // check if any active tokens exist
     authServer.query(`SELECT * FROM alltokens
-        WHERE userID = '${req.userData.userID}'
-        AND isValid = 1`, (error, result) => {
+        WHERE userID = ?
+        AND isValid = 1`,req.userData.userID, (error, result) => {
         if (error) {
             error.details = 'No valid token found'
             reject(error);
@@ -219,13 +224,13 @@ exports.checkUniqueUsername = (username) => new Promise((resolve, reject) => {
 
 });
 
-exports.saveEmailVerificationCode = (code, userID) => new Promise((resolve, reject) => {
     // saves an email verrification code with userID
-
+module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolve, reject) => {
     if (DEBUG.debug){console.log("==Saving Email Verrification==")}
+    
+    let sql = 'INSERT INTO emailverification (userID,verificationID) VALUES ?'
+    authServer.query(sql, [[userID, code]], (error, results) => {
 
-    let sql = 'INSERT INTO emailverification (userID,verificationID) VALUES(?,?)'
-    authServer.query(sql, [userID, code], (error, results) => {
         if (error) {
             reject(error)
         }
@@ -246,8 +251,8 @@ exports.verifyEmailVerificationCode = req => new Promise((resolve, reject) => {
     req.userData.username = req.query.username
     verificationCode = req.query.verification
 
-    let sql = `SELECT userID, username FROM login_credentials 
-                WHERE username = ? AND useriD IN 
+    let sql = `SELECT userID, username FROM login_credentials
+                WHERE username = ? AND useriD IN
                 (SELECT userID FROM emailverification WHERE verificationID = ?)`
 
     authServer.query(sql, [req.userData.username, verificationCode], (error, results) => {

@@ -9,7 +9,7 @@ var buildUrl = (systemIPandPort, verifficationId, username) => {
 }
 
 var getEmail = (db, userId) => new Promise((resolve, reject) => {
-    db.query(`SELECT email FROM user_profile WHERE userID = '${userId}'`, (error, results) => {
+    db.query(`SELECT email FROM user_profile WHERE userID = ?`,userId, (error, results) => {
         if (error) {
             reject(error)
         } else if (results[0]) {
@@ -19,7 +19,7 @@ var getEmail = (db, userId) => new Promise((resolve, reject) => {
 })
 
 
-exports.sendAccountVerification = async req => {
+module.exports.sendAccountVerification = async req => {
     let testVar = req
     userEmail = await getEmail(req.db, req.userData.userID)
     username = await Auth.getUsername(req.userData.userID)

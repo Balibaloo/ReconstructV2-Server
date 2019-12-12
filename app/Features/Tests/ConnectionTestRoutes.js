@@ -1,7 +1,7 @@
 const Auth = require('../Authentication/AuthenticationHelper');
 const listingPromises = require('../Listings/ListingsPromises')
 
-module.exports =function (app, db) {
+exports = (app, db)  => {
     //tests unauthenticated connections
     app.get('/', (req, res) => {
         console.log('test request received')

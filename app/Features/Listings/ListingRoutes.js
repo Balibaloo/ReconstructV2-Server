@@ -107,7 +107,7 @@ module.exports = function (app, db) {
     });
 
     ///////////awfdawfwwawawafwafawWHTIHJEWIFH{AOIWHJTHIUS}THIS
-    app.post('/auth/reserveItem',Auth.checkToken, (req,res) => {
+    app.post('/auth/reserveItem', Auth.checkToken, (req, res) => {
         customQueue
     })
 
@@ -305,6 +305,5 @@ module.exports = function (app, db) {
             }))
             .catch((error) => { customErrorLogger.logServerError(res, error) })
     });
-
 
 }

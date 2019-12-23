@@ -48,6 +48,15 @@ module.exports = (app, db) => {
             })
     });
 
+    app.post('/auth/save_user' ,Auth.checkToken, (req,res) => {
+        console.log(req.userData.userID)
+        console.log(req.body)
+
+
+
+
+    })
+
     app.get('/auth/login', (req, res) => {
 
         if (req.headers.authorisation) {

@@ -107,8 +107,15 @@ module.exports = function (app, db) {
     });
 
     ///////////awfdawfwwawawafwafawWHTIHJEWIFH{AOIWHJTHIUS}THIS
-    app.post('/auth/reserveItem', Auth.checkToken, (req, res) => {
-        customQueue
+    app.post('/auth/reserveItems', Auth.checkToken, (req, res) => {
+        itemsToReserve = req.query.listingItemIDList
+        
+        console.log("items to reserve : \n" , itemsToReserve)
+
+        res.json({
+            "message": 'Items Reserved Succesfully',
+        })
+
     })
 
     app.get("/auth/getUserListings", Auth.checkToken, (req, res) => {

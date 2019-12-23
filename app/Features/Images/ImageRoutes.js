@@ -1,4 +1,4 @@
-const imagePromises = require('./imageHandler')
+const imagePromises = require('./imagePromises')
 const customErrors = require('../../helpers/CustomErrors')
 const Auth = require('../Authentication/AuthenticationHelper')
 path = require('path')

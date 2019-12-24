@@ -1,14 +1,10 @@
 
-testListing = {"someProperty" : 1,
-                "somelists" : [{"someObj": 1},{"someObj":0}],
-                "afdawj": "123e312"}
-
-
-let intToBool = (obj) => {
+module.exports.intToBool = (obj) => {
+    // scrapes through an object and sets any (0/1) integers to (false/true)
     for (var property in obj){
         if (Array.isArray(obj[property])){
             obj[property] = obj[property].map((item) => {
-                return intToBool(item)
+                return this.intToBool(item)
             })
 
         } else if (typeof obj[property] == typeof 1){
@@ -16,11 +12,8 @@ let intToBool = (obj) => {
             if (obj[property] == 0) {obj[property] = false}
 
         } else if (typeof obj[property] == typeof {}){
-            obj[property] = intToBool(obj[property])
+            obj[property] = this.intToBool(obj[property])
         }}
         
-        return obj
+    return obj    
     }
-
-
-console.log(intToBool(testListing))

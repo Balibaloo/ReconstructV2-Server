@@ -36,8 +36,8 @@ module.exports.checkToken = (req, res, next) => {
     //// middleware that checks if the token provided with a request is valid
 
     // checks if the token field is not empty
-    if (req.headers.authorisation) {
-        var authCreds = req.headers.authorisation.split(' ');
+    if (req.headers.authorization) {
+        var authCreds = req.headers.authorization.split(' ');
 
         // checks if the rihght type of authentication is used
         if (authCreds[0] == 'Bearer') {

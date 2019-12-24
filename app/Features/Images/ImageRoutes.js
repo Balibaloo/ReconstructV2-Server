@@ -1,4 +1,4 @@
-const imagePromises = require('./imageHandler')
+const imagePromises = require('./imagePromises')
 const customErrors = require('../../helpers/CustomErrors')
 const Auth = require('../Authentication/AuthenticationHelper')
 path = require('path')
@@ -9,62 +9,21 @@ const storage = multer.diskStorage({
         cb(null, "ImageStorage")
     },
     filename: (req, file, cb) => {
-        imagePromises.saveImagetoDB(req)
-            .then((req) => { cb(null, req.query.newID + path.extname(file.originalname)) })
+        Auth.genID(newID => {
+            req.query.newID = newID
+            cb(null, req.query.newID  + path.extname(file.originalname))
+        })
     }
 })
 
 const fileSaveFilter = (req, file, cb) => {
-    checkUserIsAuthor(req)
-        .then(imagePromises.checkImageIsSaved)
-        .then(() => {
-            req.saveSuccessful = true
-            cb(null, true)
-        })
-        .catch((errorOrImageiD) => {
-            if (typeof errorOrImageiD === 'string') {
-                req.saveSuccessful = false
-                req.localImageID = errorOrImageiD
-                cb(null, false)
-            } else {
-                console.log("received error")
-                error = errorOrImageiD
-                cb(null, false)
-            }
-        })
+    if (!file.originalname == ".jpg") {
+        return cb(new Error('Only .jpg files are allowed!'), false);
+    } else {cb(null,true)}
 }
 
-var checkUserIsAuthor = req => new Promise((resolve, reject) => {
-    getAuthorFromImageID(req)
-        .then((req) => {
-            if (req.userData.userID == req.listingAuthorID) {
-                resolve(req)
-            } else {
-                customErrors.logUserError(res, "You are not the author of this listing", 403)
-                reject()
-            }
-        }).catch((error) => { reject(error) })
-});
 
-const getAuthorFromImageID = req => new Promise((resolve, reject) => {
-    let sql = `SELECT authorID FROM listing WHERE listingID IN
-                (SELECT listingID FROM listing_item WHERE listingItemID IN
-                (SELECT listingItemID FROM listing_item_images WHERE imageID = ? OR temporaryID = ?))
-                `
-    req.db.query(sql, [req.query.temp_imageID, req.query.temp_imageID], (error, results) => {
-        if (error) {
-            reject(error)
-        } else if (results[0]) {
-            req.listingAuthorID = results[0].authorID
-            resolve(req)
-        } else {
-            reject(new Error("ImageId is not valid"))
-        }
-    })
-
-})
-
-const upload = multer({ storage: storage, fileFilter: fileSaveFilter })
+const upload = multer({ storage: storage, fileFilter: fileSaveFilter})
 
 module.exports = (app, db) => {
 
@@ -72,30 +31,24 @@ module.exports = (app, db) => {
         req.db = db
         req.myArgs = {}
 
-
         imagePromises.checkFileExists(req)
-            .then(imagePromises.checkUserUsedWrongID)
             .then((req) => imagePromises.sendImageFile(req, res))
-            .catch((error, type = "server") => {
+            .catch((error,type = "server") => {
                 if (type == "user") { customErrors.logUserError(res) }
                 else if (type == "server") { customErrors.logServerError(res, error, error.message) }
 
             })
-    })
+    });
 
-    app.post("/auth/saveImage", Auth.checkToken, (req, res, next) => { req.db = db; next() }, upload.single("image"), (req, res) => {
-        if (error) {
-            customErrors.logUserError(res, error.message, 404)
-        } else if (!req.saveSuccessful) {
-            res.json({
-                "message": "image already saved",
-                "imageID": req.localImageID
-            })
-        } else if (req.saveSuccessful) {
-            res.json({
-                "message": "image saved successfuly",
-                "imageID": req.query.newID
-            })
-        }
+    app.post("/auth/saveImage", Auth.checkToken, (req, res, next) => { req.db = db; next() }, (req, res) => {
+
+        upload.single("image")(req,res,error => {
+            if (error) {
+                customErrors.logServerError(res, req.error)
+            } else {
+                res.json({"mesage": "image saved succesfully",
+                "imageID" : req.query.newID})
+            }
+        })
     });
 };

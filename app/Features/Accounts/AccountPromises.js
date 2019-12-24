@@ -36,6 +36,19 @@ module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
     });
 });
 
+// Update User Info
+module.exports.setUsername = req => new Promise((resolve, reject) => {
+    
+
+
+})
+
+
+
+
+
+
+
 module.exports.getUserProfile = req => new Promise((resolve, reject) => {
     let sql = `SELECT *
         FROM user_profile

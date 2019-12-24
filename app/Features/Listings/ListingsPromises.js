@@ -110,13 +110,6 @@ module.exports.getListingItemTags = req => new Promise((resolve, reject) => {
     })
 });
 
-//#################################################################################
-module.exports.getListingItemImages = req => new Promise((resolve, reject) => {
-    //// just need to load image ID strings into item
-    console.log("Fetched Listing Item Images")
-    resolve(req)
-});
-
 module.exports.saveViewRequest = req => new Promise((resolve, reject) => {
     //// logs a view request if the authorID does not match userID
     if (req.userData.userID != req.listing.authorID) {
@@ -136,6 +129,35 @@ module.exports.saveViewRequest = req => new Promise((resolve, reject) => {
         })
     } else { resolve(req) }
 });
+
+module.exports.atachImageIds = req => new Promise((resolve,reject) => {
+
+    let sqlSelect = `SELECT imageID,listingItemID FROM listing_item_images WHERE
+    listingItemID IN
+    (SELECT listingItemID
+        FROM listing_item
+        WHERE listingID = ? )`
+
+    req.db.query(sqlSelect, [req.listing.listingID], (error, result) => {
+    if (error) {
+        reject(error)
+    } else if (result[0]) {
+        req.listing.itemList.map(item => {
+            item.imageArray = [] 
+            result.forEach((idListingPair,index) => {
+                console.log("compair = ",item.listingItemID, " - ",idListingPair.listingItemID)
+                if (item.listingItemID == idListingPair.listingItemID) {
+                    item.imageArray.push(idListingPair.imageID)
+                }
+            })
+        })
+
+        resolve(req)
+    }
+    })
+
+
+})
 
 module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
     req.userData = req.query
@@ -306,11 +328,9 @@ module.exports.insertImageIds = req => new Promise((resolve, reject) => {
         item.images.forEach((imageID) => { finalImageArray.push([imageID, item.itemID]) })
     })
 
-
-    const sql = `INSERT INTO listing_item_images (temporaryID,listingItemID) VALUES ?`;
+    const sql = `INSERT INTO listing_item_images (imageID, listingItemID) VALUES ?`;
     db.query(sql, [finalImageArray], (error) => {
         if (error) {
-            
             error.details = "image Save Error"
             reject(error)
         } else {

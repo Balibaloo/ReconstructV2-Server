@@ -1,8 +1,8 @@
 const customErrorLogger = require('../../helpers/CustomErrors')
 const listingPromises = require('./ListingsPromises')
 const Auth = require('../Authentication/AuthenticationHelper');
-const imagePromises = require('../Images/imageHandler')
-const customQueue = require('../../helpers/romansQueue')
+const imagePromises = require('../Images/imagePromises')
+const intToBoolScraper = require('../../helpers/intToBool');
 const DEBUG = require("../../../StartServer").DEBUG
 
 var pruneNonTagsfrom = (tagList) => {
@@ -68,12 +68,12 @@ module.exports = function (app, db) {
         listingPromises.getListing(req)
             .then(listingPromises.getListingItems)
             .then(listingPromises.getListingItemTags)
-            .then(listingPromises.getListingItemImages)
+            .then(listingPromises.atachImageIds)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
                     "message": 'Listing Fetched Succesfully',
-                    "listing": req.listing
+                    "listing": intToBoolScraper.intToBool(req.listing)
                 })
             })
             .catch((err) => {
@@ -85,20 +85,19 @@ module.exports = function (app, db) {
     app.get('/auth/getListing', Auth.checkToken, (req, res) => {
         req.db = db
 
-        /// need to replace image ids with loaded images
         if (DEBUG.debug){console.log("=====GET LISTING AUTH=====")}
         if (DEBUG.values){console.log("userID = " + req.userData.userID)}
 
         listingPromises.getListing(req)
             .then(listingPromises.getListingItems)
             .then(listingPromises.getListingItemTags)
-            .then(listingPromises.getListingItemImages)
+            .then(listingPromises.atachImageIds)
             .then(listingPromises.saveViewRequest)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
                 res.json({
                     "message": 'Listing Fetched Succesfully',
-                    "listing": req.listing
+                    "listing": intToBoolScraper.intToBool(req.listing)
                 })
             })
             .catch((error) => {
@@ -135,7 +134,7 @@ module.exports = function (app, db) {
                 console.log("User Listings sent succesfully")
                 res.json({
                     'message': "Fetched Succefully",
-                    'listings': results
+                    'listings': intToBoolScraper.intToBool(results)
                 })
             } else {
                 customErrorLogger.logServerError(res, new Error('No Entries Exist'))
@@ -160,13 +159,9 @@ module.exports = function (app, db) {
                 customErrorLogger.logServerError(res, error, "Recent Listing Error")
             } else {
                 console.log('Recent Listings Sent Successfully')
-                results = results.map((item) => {
-                    item.isActive = item.isActive == 1 ? true : false
-                    return item
-                })
                 res.json({
                     "message": 'Recent Listings Fetched Succesfully',
-                    "listings": results
+                    "listings": intToBoolScraper.intToBool(results)
                 })
             }
         })
@@ -174,7 +169,8 @@ module.exports = function (app, db) {
 
     app.get('/getFrontPageListings', (req, res) => {
         // checks if user has provided an integer page number to load
-        const listingsPerPage = req.query.listingsPerPage
+        const listingsPerPage = 10;
+        pageNum = req.query.pageNum ? req.query.pageNum : 0
         let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
 
         let sql = `SELECT *
@@ -193,14 +189,10 @@ module.exports = function (app, db) {
             if (error) {
                 customErrorLogger.logServerError(res, error, error.message)
             } else if (results[0]) {
-                results = results.map((item) => {
-                    item.isActive = item.isActive == '1' ? true : false
-                    return item
-                })
                 console.log("Front page Listings sent succesfully")
                 res.json({
                     'message': "Fetched Succefully",
-                    'listings': results
+                    'listings': intToBoolScraper.intToBool(results)
                 })
             } else {
                 customErrorLogger.logServerError(res, new Error('No Entries Exist'))
@@ -229,13 +221,9 @@ module.exports = function (app, db) {
                     customErrorLogger.logServerError(res, error, 'Filter listing error')
                 } else {
                     console.log('Filtered Results Sent Succesfully')
-                    results = results.map((item) => {
-                        item.isActive = item.isActive == 1 ? true : false
-                        return item
-                    })
                     res.json({
                         "message": 'Filtered Results Fetched Succesfully',
-                        "listings": results
+                        "listings": intToBoolScraper.intToBool(results)
                     })
                 }
             })
@@ -261,13 +249,9 @@ module.exports = function (app, db) {
                 customErrorLogger.logServerError(res, error, "Recent Listing Error")
             } else {
                 console.log('Recent Listings Sent Successfully')
-                results = results.map((item) => {
-                    item.isActive = item.isActive == 1 ? true : false
-                    return item
-                })
                 res.json({
                     "message": 'Recent Listings Fetched Succesfully',
-                    "listings": results
+                    "listings": intToBoolScraper.intToBool(results)
                 })
             }
         })

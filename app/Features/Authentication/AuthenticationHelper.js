@@ -21,7 +21,7 @@ module.exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
 
     req.userData = {}
 
-    authCreds = req.headers.authorisation.split(' ');
+    authCreds = req.headers.authorization.split(' ');
     decodedCreds = Buffer.from(authCreds[1], 'base64').toString().split(':');
 
     req.userData.username = decodedCreds[0]
@@ -35,15 +35,16 @@ module.exports.checkToken = (req, res, next) => {
     if (DEBUG.debug){console.log("==Checking Token==")}
     //// middleware that checks if the token provided with a request is valid
 
-    // checks if the token field is not empty
-    if (req.headers.authorization) {
+    console.log(req.headers)
+
+    // checks if the token field is not empty and contains at least 2 space separated strings
+    if (req.headers.authorization && req.headers.authorization.split(' ')[1]) {
         var authCreds = req.headers.authorization.split(' ');
 
         // checks if the rihght type of authentication is used
         if (authCreds[0] == 'Bearer') {
             const userToken = authCreds[1];
-
-            authServer.query(`SELECT * FROM alltokens WHERE Token = ?`,userToken,
+            authServer.query(`SELECT * FROM alltokens WHERE Token = ?`,[userToken],
                 (error, result) => {
                     // check if the token matches an active one in the database
                     if (error) {
@@ -136,7 +137,7 @@ module.exports.saveUser = req => new Promise((resolve, reject) => {
                 authServer.query(`INSERT INTO login_credentials
                                 (userID, username, password, salt)
                                 VALUES ?`,
-                                [[req.userData.userID,req.userData.username,password,salt]],
+                                [[[req.userData.userID,req.userData.username,password,salt]]],
                     (error) => {
                         if (error) {
                             error.details = 'Saving'
@@ -229,7 +230,7 @@ module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolv
     if (DEBUG.debug){console.log("==Saving Email Verrification==")}
     
     let sql = 'INSERT INTO emailverification (userID,verificationID) VALUES ?'
-    authServer.query(sql, [[userID, code]], (error, results) => {
+    authServer.query(sql, [[[userID, code]]], (error, results) => {
 
         if (error) {
             reject(error)
@@ -238,18 +239,22 @@ module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolv
             resolve()
         }
     })
-
 });
 
 module.exports.verifyEmailVerificationCode = req => new Promise((resolve, reject) => {
     // checks if given email verrification code exists in database
 
-    if (DEBUG.debug){console.log("==Checking Email Verrification==")}
-    if (DEBUG.values){console.log("code = ", verificationCode)}
-
     req.userData = {}
     req.userData.username = req.query.username
     verificationCode = req.query.verification
+
+    if (DEBUG.debug){console.log("==Checking Email Verrification==")}
+    if (DEBUG.values){console.log("code = ", verificationCode)}
+
+    if (!verificationCode){
+        reject(new Error("verrification code is not defined"))
+    }
+    
 
     let sql = `SELECT userID, username FROM login_credentials
                 WHERE username = ? AND useriD IN

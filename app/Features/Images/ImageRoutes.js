@@ -6,6 +6,8 @@ var multer = require('multer');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        console.log("destinbation")
+        console.log("file == ", file)
         cb(null, "ImageStorage")
     },
     filename: (req, file, cb) => {
@@ -17,6 +19,8 @@ const storage = multer.diskStorage({
 })
 
 const fileSaveFilter = (req, file, cb) => {
+    console.log("filesavefilter")
+    console.log("file = ", file)
     if (!file.originalname == ".jpg") {
         return cb(new Error('Only .jpg files are allowed!'), false);
     } else {cb(null,true)}
@@ -41,8 +45,9 @@ module.exports = (app, db) => {
     });
 
     app.post("/auth/saveImage", Auth.checkToken, (req, res, next) => { req.db = db; next() }, (req, res) => {
+        if (true) {console.log("==== SAVING IMAGE ====")}
 
-        upload.single("image")(req,res,error => {
+        upload.single("image")(req,res, (error) => {
             if (error) {
                 customErrors.logServerError(res, req.error)
             } else {

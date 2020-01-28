@@ -145,7 +145,6 @@ module.exports.atachImageIds = req => new Promise((resolve,reject) => {
         req.listing.itemList.map(item => {
             item.imageArray = [] 
             result.forEach((idListingPair,index) => {
-                console.log("compair = ",item.listingItemID, " - ",idListingPair.listingItemID)
                 if (item.listingItemID == idListingPair.listingItemID) {
                     item.imageArray.push(idListingPair.imageID)
                 }
@@ -196,7 +195,7 @@ module.exports.insertMainListing = req => new Promise((resolve, reject) => {
         req.userData.listingID = listingID
 
         db.query(`INSERT INTO listing
-        (listingID, authorID, title, body, main_photo, end_date, location)
+        (listingID, authorID, title, body, mainImageID, end_date, location)
         VALUES ?`, [[[listingID, authorID, title, body, main_photo, end_date, location]]],
             (error) => {
                 if (error) {

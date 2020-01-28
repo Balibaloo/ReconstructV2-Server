@@ -5,7 +5,7 @@ const crypto = require('crypto');
 /// to send veriffication email, send email to email provided in the user email with random code generated
 
 var buildUrl = (systemIPandPort, verifficationId, username) => {
-    return 'https://' + systemIPandPort + '/verifyEmail?verification=' + verifficationId.toString() + "&username=" + username
+    return 'http://' + systemIPandPort + '/verifyEmail?verification=' + verifficationId.toString() + "&username=" + username
 }
 
 var getEmail = (db, userId) => new Promise((resolve, reject) => {

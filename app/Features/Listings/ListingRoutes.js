@@ -31,6 +31,8 @@ module.exports = function (app, db) {
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
         req.db = db;
 
+        console.log(req.body)
+
         /// need to save images sent to server, and replace them with their ids
         listingPromises.insertMainListing(req)
             .then(listingPromises.insertListingItems)
@@ -105,14 +107,28 @@ module.exports = function (app, db) {
             })
     });
 
-    ///////////awfdawfwwawawafwafawWHTIHJEWIFH{AOIWHJTHIUS}THIS
     app.post('/auth/reserveItems', Auth.checkToken, (req, res) => {
-        itemsToReserve = req.query.listingItemIDList
-        
-        console.log("items to reserve : \n" , itemsToReserve)
+        if (req.query.listingItemIDList && req.query.listingItemIDList[0])
 
-        res.json({
-            "message": 'Items Reserved Succesfully',
+        console.log(req.query)
+
+        itemsToReserve = req.query.listingItemIDList.map(item => {return JSON.parse(item).itemID})
+        
+        if (DEBUG.values) {
+            console.log("items to reserve : \n" ,  itemsToReserve)
+        }
+         
+        let sql = `UPDATE listing_item SET isAvailable = 0
+                    WHERE listingItemID IN ?`
+
+        db.query(sql,[[itemsToReserve]], error => {
+            if (error) {
+                customErrorLogger.logServerError(res ,error)
+            } else {
+                res.json({
+                    "message": 'Items Reserved Succesfully',
+                })
+            }
         })
 
     })
@@ -186,6 +202,7 @@ module.exports = function (app, db) {
                 `
 
         db.query(sql, [pageOffset, listingsPerPage], (error, results) => {
+
             if (error) {
                 customErrorLogger.logServerError(res, error, error.message)
             } else if (results[0]) {

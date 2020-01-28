@@ -8,7 +8,9 @@ module.exports.logServerError = (res, error, message = "Server Error") => {
             "message": message,
             "error": error
         })
-    } finally { }
+    } catch(error){ 
+        console.log(error)
+    }
 };
 
 module.exports.logUserError = (res, message = "User Error", code = 400) => {
@@ -17,5 +19,7 @@ module.exports.logUserError = (res, message = "User Error", code = 400) => {
         res.status(code).json({
             "message": message
         })
-    } finally { }
+    } catch(error){ 
+        console.log(error)
+    }
 }

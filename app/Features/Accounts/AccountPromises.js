@@ -1,4 +1,4 @@
-
+const DEBUG = require("../../../StartServer").DEBUG
 const Auth = require('../Authentication/AuthenticationHelper');
 
 module.exports.changeWantedTags = req => new Promise((resolve, reject) => {
@@ -17,12 +17,11 @@ module.exports.setEmailVerified = req => new Promise((resolve, reject) => {
 })
 
 module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
-    req.userData = req.query
     Auth.genID((userID) => {
         req.userData.userID = userID
         req.db.query(`INSERT INTO user_profile (userID, fName, lName, email, phone)
                     VALUES ?`,
-            [[[req.userData.userID, req.userData.first_name, req.userData.last_name, req.userData.email, req.userData.phone]]],
+            [[[req.userData.userID, req.userData.fName, req.userData.lName, req.userData.email, req.userData.phone]]],
             (error, result) => {
                 if (error) {
                     
@@ -38,30 +37,29 @@ module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
 
 // Update User Info
 module.exports.setUsername = req => new Promise((resolve, reject) => {
-    
-
 
 })
 
-
-
-
-
-
-
 module.exports.getUserProfile = req => new Promise((resolve, reject) => {
     let sql = `SELECT *
-        FROM user_profile
+        FROM user_profile 
         WHERE userID = ?`
+
+        if (!req.query.userID){
+            error = {message : "UserID un defined", code : 404}
+            error.customType = "user"
+            reject(error)
+        }
         
         req.db.query(sql ,req.query.userID, (error, result) => {
             if (error) {
-                reject(error,"server")
+                error.customType = "server"
+                reject(error)
             } else if (result[0]) {
-                delete result[0].userID
                 resolve(result[0])
             } else {
                 error = {message : "No User Found", code : 404}
+                error.customType = "user"
                 reject(error)
             };
 
@@ -69,7 +67,7 @@ module.exports.getUserProfile = req => new Promise((resolve, reject) => {
 
 });
 
-module.exports.deleteUser = userID => new Promise((resolve, reject) => {
+module.exports.deleteUser = (userID,db) => new Promise((resolve, reject) => {
     let sql =`DELETE FROM user_profile WHERE userID = ?`
     db.query(sql,userID,
         (error) => {

@@ -8,8 +8,11 @@ module.exports.intToBool = (obj) => {
             })
 
         } else if (typeof obj[property] == typeof 1){
-            if (obj[property] == 1) {obj[property] = true}
-            if (obj[property] == 0) {obj[property] = false}
+            if (["numOfViews","location_lat","location_lon"].indexOf(property) == -1) {
+                if (obj[property] == 1) {obj[property] = true}
+                if (obj[property] == 0) {obj[property] = false}
+            }
+            
 
         } else if (typeof obj[property] == typeof {}){
             obj[property] = this.intToBool(obj[property])

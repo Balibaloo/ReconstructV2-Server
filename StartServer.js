@@ -3,9 +3,9 @@ const app = require('express')(); // initialise the application framework
 const mysql = require('mysql'); // sql connection manager
 
 // debugging options
-module.exports.DEBUG = {debug: true, values: true}
+module.exports.DEBUG = {debug: true, values: true, json: true}
 
-const port = 1234;
+const port = 8080;
 const dbhost = "localhost";
 const dbuser = "ServerData";
 const dbpass = "SQLSECURE";

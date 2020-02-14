@@ -3,7 +3,7 @@ const listingPromises = require('../Listings/ListingsPromises')
 
 module.exports = (app, db)  => {
     //tests unauthenticated connections
-    app.get('/', (req, res) => {
+    app.get('/test', (req, res) => {
         console.log('test request received')
         res.json({
             "message": "Connection Successful!"

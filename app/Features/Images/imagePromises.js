@@ -52,6 +52,7 @@ module.exports.fetchImageIDs = req => new Promise((resolve, reject) => {
 })
 
 module.exports.deleteImages = req => new Promise((resolve, reject) => {
+    console.log(req.selectedImages)
     if (req.selectedImages == "empty") {
         console.log('no images to delete')
         resolve(req)

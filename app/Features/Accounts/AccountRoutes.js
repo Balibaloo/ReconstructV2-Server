@@ -53,6 +53,7 @@ module.exports = (app, db) => {
             })
     });
 
+    //*******************************************************************/
     app.post('/auth/update_user_data' ,Auth.checkToken, (req,res) => {
         if (DEBUG.debug) {console.log("Body received" ,req.body)}
         
@@ -129,10 +130,16 @@ module.exports = (app, db) => {
                 })
             })
     });
+    
+    //*******************************************************************/
+    app.post('/auth/addListingtoWatchList', Auth.checkToken, (req, res) => { 
 
-    app.post('/auth/addListingtoWatchList', Auth.checkToken, (req, res) => { });
+    });
 
-    app.post('/auth/removeListingfromWatchList', Auth.checkToken, (req, res) => { });
+    //*******************************************************************/
+    app.post('/auth/removeListingfromWatchList', Auth.checkToken, (req, res) => { 
+
+    });
 
     app.get('/auth/getWatchlist', Auth.checkToken, (req, res) => { })
 
@@ -161,4 +168,9 @@ module.exports = (app, db) => {
 
 
     });
+
+    //*******************************************************************/
+    app.post('/resetPassword', (req,res) => {
+        
+    })
 }

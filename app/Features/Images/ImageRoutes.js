@@ -34,7 +34,6 @@ module.exports = (app, db) => {
     app.get("/getImage", (req, res) => {
         req.db = db
         req.myArgs = {}
-
         imagePromises.checkFileExists(req)
             .then((req) => imagePromises.sendImageFile(req, res))
             .catch((error,type = "server") => {
@@ -56,4 +55,19 @@ module.exports = (app, db) => {
             }
         })
     });
+
+    app.delete("/auth/deleteImage", Auth.checkToken, (req,res,next) => {
+        imageToDelete = req.query
+        if (imageToDelete) {
+            req.selectedImages = imageToDelete
+            
+            imagePromises.deleteImages(req)
+                .then(req => {res.json({"message": "image succesfully deleted"})})
+                .catch(error => customErrors.logServerError(res,error))
+
+        } else {
+            customErrors.logUserError(res,"no image id speciffied",404)
+        }
+
+    })
 };

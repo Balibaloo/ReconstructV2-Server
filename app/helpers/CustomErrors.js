@@ -19,6 +19,7 @@ module.exports.logUserError = (res, message = "User Error", code = 400) => {
         res.status(code).json({
             "message": message
         })
+        
     } catch(error){ 
         console.log(error)
     }

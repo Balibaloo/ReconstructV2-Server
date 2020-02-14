@@ -5,15 +5,7 @@ const imagePromises = require('../Images/imagePromises')
 const intToBoolScraper = require('../../helpers/intToBool');
 const DEBUG = require("../../../StartServer").DEBUG
 
-var pruneNonTagsfrom = (tagList) => {
-    const tagsToFilter = []
-    tagList = tagList.filter((value) => {
-        if (value in tagsToFilter) {
-            return false
-        } else return true
-    })
-    return tagList
-}
+
 
 var getSQLPageOffset = (itemsPerPage, pageNumber) => {
     if (!pageNumber || !Number.isInteger(pageNumber)) {
@@ -26,6 +18,14 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
 
 }
 
+var sendJson = (res,debug,body) => {
+    if (debug.json) {
+        console.log(body)
+    }
+    res.json(body)
+
+}
+
 module.exports = function (app, db) {
 
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
@@ -33,24 +33,24 @@ module.exports = function (app, db) {
 
         console.log(req.body)
 
-        /// need to save images sent to server, and replace them with their ids
         listingPromises.insertMainListing(req)
             .then(listingPromises.insertListingItems)
             .then(listingPromises.insertImageIds)
             .then(listingPromises.insertNewTags)
             .then(listingPromises.replaceTagsWithIDs)
             .then(listingPromises.insertItemTags)
+            .then(listingPromises.insertListingVisit)
             .then((req) => {
                 console.log('Listing Saved sucsessfully')
                 if (DEBUG.values) {console.log("ListingID = " + req.userData.listingID)}
-                res.json({
+                sendJson(res, DEBUG,{
                     "message": 'Listing Saved Successfully',
                     "listingID": req.userData.listingID
                 })
             })
             .catch((error) => {
                 listingPromises.deleteListing(req)
-                    .then(customErrorLogger.logServerError(res, error))
+                    .then(customErrorLogger.logServerError(res, error,))
                     .then(console.log('succesfully cleaned up'))
                     .catch((err) => {
                         customErrorLogger.logServerError(res, err, "Cleanup Error")
@@ -73,7 +73,7 @@ module.exports = function (app, db) {
             .then(listingPromises.atachImageIds)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
-                res.json({
+                sendJson(res,DEBUG,{
                     "message": 'Listing Fetched Succesfully',
                     "listing": intToBoolScraper.intToBool(req.listing)
                 })
@@ -97,7 +97,7 @@ module.exports = function (app, db) {
             .then(listingPromises.saveViewRequest)
             .then((req) => {
                 console.log('Listing Fetched Successfully')
-                res.json({
+                sendJson(res, DEBUG,{
                     "message": 'Listing Fetched Succesfully',
                     "listing": intToBoolScraper.intToBool(req.listing)
                 })
@@ -125,7 +125,7 @@ module.exports = function (app, db) {
             if (error) {
                 customErrorLogger.logServerError(res ,error)
             } else {
-                res.json({
+                sendJson(res, DEBUG,{
                     "message": 'Items Reserved Succesfully',
                 })
             }
@@ -133,13 +133,13 @@ module.exports = function (app, db) {
 
     })
 
-    app.get("/auth/getUserListings", Auth.checkToken, (req, res) => {
+    app.get("/getUserListings", (req, res) => {
 
         let sql = `SELECT * FROM listing
-                    WHERE userID = ?
+                    WHERE authorID = ?
                     ORDER BY post_date DESC`
 
-        db.query(sql, req.userData.userID, (error, results) => {
+        db.query(sql, req.query.userID, (error, results) => {
             if (error) {
                 customErrorLogger.logServerError(res, error, error.message)
             } else if (results[0]) {
@@ -148,7 +148,7 @@ module.exports = function (app, db) {
                     return item
                 })
                 console.log("User Listings sent succesfully")
-                res.json({
+                sendJson(res, DEBUG,{
                     'message': "Fetched Succefully",
                     'listings': intToBoolScraper.intToBool(results)
                 })
@@ -175,7 +175,7 @@ module.exports = function (app, db) {
                 customErrorLogger.logServerError(res, error, "Recent Listing Error")
             } else {
                 console.log('Recent Listings Sent Successfully')
-                res.json({
+                sendJson(res, DEBUG,{
                     "message": 'Recent Listings Fetched Succesfully',
                     "listings": intToBoolScraper.intToBool(results)
                 })
@@ -207,7 +207,7 @@ module.exports = function (app, db) {
                 customErrorLogger.logServerError(res, error, error.message)
             } else if (results[0]) {
                 console.log("Front page Listings sent succesfully")
-                res.json({
+                sendJson(res,DEBUG,{
                     'message': "Fetched Succefully",
                     'listings': intToBoolScraper.intToBool(results)
                 })
@@ -221,10 +221,10 @@ module.exports = function (app, db) {
     app.get('/getFilteredListings', (req, res) => {
         const listingsPerPage = 10
         let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
-
+        
         searchStringArray = req.query.searchString.split(" ")
-        searchStringArray = pruneNonTagsfrom(searchStringArray)
-
+        searchStringArray = searchStringArray.map((tag) => {return tag.toLowerCase()})
+        searchStringArray = listingPromises.pruneNonTagsFrom(searchStringArray)
 
 
         let sql = `SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
@@ -232,13 +232,13 @@ module.exports = function (app, db) {
             WHERE tagID
             IN (SELECT tagID FROM tags WHERE tagName IN ? )) ORDER BY isActive DESC LIMIT ?, ?`
 
-        db.query(sql, [searchStringArr ,pageOffset, listingsPerPage],
+        db.query(sql, [[searchStringArray] ,pageOffset, listingsPerPage],
             (error, results) => {
                 if (error) {
                     customErrorLogger.logServerError(res, error, 'Filter listing error')
                 } else {
                     console.log('Filtered Results Sent Succesfully')
-                    res.json({
+                    sendJson(res,DEBUG,{
                         "message": 'Filtered Results Fetched Succesfully',
                         "listings": intToBoolScraper.intToBool(results)
                     })
@@ -266,7 +266,7 @@ module.exports = function (app, db) {
                 customErrorLogger.logServerError(res, error, "Recent Listing Error")
             } else {
                 console.log('Recent Listings Sent Successfully')
-                res.json({
+                sendJson(res, DEBUG,{
                     "message": 'Recent Listings Fetched Succesfully',
                     "listings": intToBoolScraper.intToBool(results)
                 })
@@ -290,7 +290,7 @@ module.exports = function (app, db) {
                 customErrorLogger.logServerError(res, error, "Desired Items Fetch Error")
             } else {
                 console.log("Desired Items Fetched Succesfully")
-                res.json({
+                sendJson(res, DEBUG,{
                     "message": 'Desired Items Fetched Succesfully',
                     "tags": results
                 })

@@ -1,15 +1,14 @@
-const customErrorLogger = require('../../helpers/CustomErrors')
-const listingPromises = require('./ListingsPromises')
-const Auth = require('../Authentication/AuthenticationHelper');
-const imagePromises = require('../Images/imagePromises')
-const intToBoolScraper = require('../../helpers/intToBool');
-const DEBUG = require("../../../StartServer").DEBUG
+const customLog = require('../../helpers/CustomLogs')   // import custom logger
+const listingPromises = require('./ListingsPromises')   // import listing promisses
+const imagePromises = require('../Images/imagePromises')    // import image promises
+const tagPruner = require('../../helpers/tagPruner')    // import tag pruner
+const Auth = require('../Authentication/AuthenticationHelper')  // import authentication helper
 
-
-
-var getSQLPageOffset = (itemsPerPage, pageNumber) => {
+//calculates the ammount of items to skip sending
+var calculatePageOffset = (itemsPerPage, pageNumber) => {
     if (!pageNumber || !Number.isInteger(pageNumber)) {
         pageOffset = 1
+    
     } else {
         pageOffset = pageNumber
     }
@@ -18,20 +17,32 @@ var getSQLPageOffset = (itemsPerPage, pageNumber) => {
 
 }
 
-var sendJson = (res,debug,body) => {
-    if (debug.json) {
-        console.log(body)
-    }
-    res.json(body)
+// adds page offset and listings per page to req
+var addPageOffsetToReq = (req,res,next) => {
 
+    // checks if the client has provided the number of listings to load per page
+    req.listingsPerPage = req.query.listingsPerPage ? listingsPerPage : 10
+
+    // checks if the client has provided a page nuumber to load
+    pageNum = req.query.pageNum ? req.query.pageNum : 0
+
+    //calculates the ammount of items to skip sending
+    req.pageOffset = calculatePageOffset(req.listingsPerPage, req.query.pageNum)
+
+    next()
 }
 
 module.exports = function (app, db) {
 
+    // create a new listing
     app.post('/auth/createListing', Auth.checkToken, (req, res) => {
-        req.db = db;
+        customLog.connectionStart("Creating Listing")
 
-        console.log(req.body)
+        // append the databse connection to the req object
+        req.db = db
+        
+        // log body value
+        customLog.incomingData(req.body,"body")
 
         listingPromises.insertMainListing(req)
             .then(listingPromises.insertListingItems)
@@ -39,155 +50,207 @@ module.exports = function (app, db) {
             .then(listingPromises.insertNewTags)
             .then(listingPromises.replaceTagsWithIDs)
             .then(listingPromises.insertItemTags)
-            .then(listingPromises.insertListingVisit)
+            .then(listingPromises.logListingView)
             .then((req) => {
-                console.log('Listing Saved sucsessfully')
-                if (DEBUG.values) {console.log("ListingID = " + req.userData.listingID)}
-                sendJson(res, DEBUG,{
+                customLog.values(req.userData.listingID,"ListingID")
+
+                // send data to client
+                customLog.sendJson(res, {
                     "message": 'Listing Saved Successfully',
                     "listingID": req.userData.listingID
                 })
+
+                
             })
             .catch((error) => {
+                // if inserting a listing fails
+                // the inserted listing data is erased
+
                 listingPromises.deleteListing(req)
-                    .then(customErrorLogger.logServerError(res, error,))
-                    .then(console.log('succesfully cleaned up'))
-                    .catch((err) => {
-                        customErrorLogger.logServerError(res, err, "Cleanup Error")
+                    .then(customLog.sendServerError(res, error, error.message))
+                    .catch((error) => {
+                        customLog.sendServerError(res, error, "Listing Cleanup Error")
                     })
             })
     });
 
-    app.get('/getListingNoAuth', (req, res) => {
+    // fetch a listing without authentication
+    app.get('/getListing', (req, res) => {
+        customLog.connectionStart("Getting Listing no Auth")
+        customLog.incomingData(req.query.listingID,"listing ID")
 
-        if (DEBUG.debug){console.log("=====GET LISTING NO AUTH=====")}
+        // checks if the client proided a listing id to fetch
+        if(req.query.listingID){
+            // append the databse connection to the req object
+            req.db = db
 
-        if(!req.query.listingID){
-            customErrorLogger.logUserError(res,"listing id is not defined",404)
+            // log body value
+            customLog.incomingData(req.body,"body")
+
+            listingPromises.getListing(req)
+                .then(listingPromises.getListingItems)
+                // .then(listingPromises.getListingItemTags)
+                .then(listingPromises.atachImageIds)
+                .then((req) => {
+
+                    // send data to client
+                customLog.sendJson(res, {
+                        "message": 'Listing Fetched ',
+                        "listing": req.listing
+                    })
+
+                })
+                .catch((error) => {
+                    customLog.sendServerError(res, error, "Listing Could not be Fetched")
+                })
+
         } else {
-
-        req.db = db
-        listingPromises.getListing(req)
-            .then(listingPromises.getListingItems)
-            .then(listingPromises.getListingItemTags)
-            .then(listingPromises.atachImageIds)
-            .then((req) => {
-                console.log('Listing Fetched Successfully')
-                sendJson(res,DEBUG,{
-                    "message": 'Listing Fetched Succesfully',
-                    "listing": intToBoolScraper.intToBool(req.listing)
-                })
-            })
-            .catch((err) => {
-                customErrorLogger.logServerError(res, err, "Listing Could not be Fetched")
-            })
+            // if no listing id is provided
+            customLog.sendUserError(res,"listing id is not defined",404)
         }
     });
 
+    // fetch a listing with authentication
     app.get('/auth/getListing', Auth.checkToken, (req, res) => {
-        req.db = db
+        customLog.connectionStart("Getting Listing Auth")
+        customLog.incomingData(req.query.listingID,"listing ID")
 
-        if (DEBUG.debug){console.log("=====GET LISTING AUTH=====")}
-        if (DEBUG.values){console.log("userID = " + req.userData.userID)}
+        // check if client provided a listing id
+        if(req.query.listingID){
+            // append the databse connection to the req object
+            req.db = db
+            
+            listingPromises.getListing(req)
+                .then(listingPromises.getListingItems)
+                // .then(listingPromises.getListingItemTags)
+                .then(listingPromises.atachImageIds)
+                .then(listingPromises.saveViewRequest)
+                .then((req) => {
 
-        listingPromises.getListing(req)
-            .then(listingPromises.getListingItems)
-            .then(listingPromises.getListingItemTags)
-            .then(listingPromises.atachImageIds)
-            .then(listingPromises.saveViewRequest)
-            .then((req) => {
-                console.log('Listing Fetched Successfully')
-                sendJson(res, DEBUG,{
-                    "message": 'Listing Fetched Succesfully',
-                    "listing": intToBoolScraper.intToBool(req.listing)
+                    // send data to client
+                customLog.sendJson(res, {
+                        "message": 'Listing Fetched ',
+                        "listing": req.listing
+                    })
+
                 })
-            })
-            .catch((error) => {
-                customErrorLogger.logServerError(res, error, "Listing Fetch Error")
-            })
+                .catch((error) => {
+                    customLog.sendServerError(res, error, "Listing Fetch Error")
+                })
+
+        } else {
+            // if no listing id is provided
+            customLog.sendUserError(res,"listing id is not defined",404)
+        }
     });
 
+    // reserve listing items for a user
     app.post('/auth/reserveItems', Auth.checkToken, (req, res) => {
-        if (req.query.listingItemIDList && req.query.listingItemIDList[0])
+        customLog.connectionStart("Reserving Items")
 
-        console.log(req.query)
+        // checks if the request contains a list of items to reserve with at least one item
+        if (req.query.listingItemIDList && req.query.listingItemIDList[0]) { 
+            customLog.incomingData(req.query)
+            
+            // creates a list of item ids to reserve
+            itemsToReserve = req.query.listingItemIDList.map(item => {return JSON.parse(item).itemID})
+            
+            customLog.incomingData(itemsToReserve,"items to reserve")
+            
+            let sql = `UPDATE listing_item SET isAvailable = 0
+                        WHERE listingItemID IN ?`
 
-        itemsToReserve = req.query.listingItemIDList.map(item => {return JSON.parse(item).itemID})
-        
-        if (DEBUG.values) {
-            console.log("items to reserve : \n" ,  itemsToReserve)
+            // query the database
+            db.query(sql,[[itemsToReserve]], error => {
+                if (error) {
+                    customLog.sendServerError(res ,error, error.message)
+
+                } else {
+                    // send data to client
+                customLog.sendJson(res, {
+                        "message": 'Items Reserved',
+                    })
+                }
+            })
+
+        } else {
+            customLog.sendUserError(res,"No Items to Reserve")
         }
-         
-        let sql = `UPDATE listing_item SET isAvailable = 0
-                    WHERE listingItemID IN ?`
-
-        db.query(sql,[[itemsToReserve]], error => {
-            if (error) {
-                customErrorLogger.logServerError(res ,error)
-            } else {
-                sendJson(res, DEBUG,{
-                    "message": 'Items Reserved Succesfully',
-                })
-            }
-        })
-
     })
 
+    // fetch all listings of a user
     app.get("/getUserListings", (req, res) => {
+        customLog.connectionStart("Fetching User Listings")
+        customLog.incomingData(req.userData.userID,"user ID")
 
         let sql = `SELECT * FROM listing
                     WHERE authorID = ?
                     ORDER BY post_date DESC`
 
+        // query the database
         db.query(sql, req.query.userID, (error, results) => {
             if (error) {
-                customErrorLogger.logServerError(res, error, error.message)
+                customLog.sendServerError(res, error, error.message)
+
             } else if (results[0]) {
+
+                // converts sql boolean (1/0) to true/false boolean
                 results = results.map((item) => {
                     item.isActive = item.isActive == '1' ? true : false
                     return item
                 })
-                console.log("User Listings sent succesfully")
-                sendJson(res, DEBUG,{
-                    'message': "Fetched Succefully",
-                    'listings': intToBoolScraper.intToBool(results)
+                
+                // send data to client
+                customLog.sendJson(res, {
+                    'message': "User Listings Fetched",
+                    'listings': results
                 })
             } else {
-                customErrorLogger.logServerError(res, new Error('No Entries Exist'))
+                customLog.sendServerError(res, new Error('No Entries Exist'), "No Entries Exist")
             }
         })
     })
 
-    app.get('/auth/getRecentListings', Auth.checkToken, (req, res) => {
+    // fetch the recently viewed listings of a user
+    app.get('/auth/getRecentListings', Auth.checkToken, addPageOffsetToReq, (req, res) => {
+        customLog.connectionStart("Fetching Recently Viewed Listings")
+        customLog.incomingData(req.userData.userID,"user ID")
+
         let sql = `SELECT *
         FROM listing
         RIGHT JOIN
         (SELECT *
             FROM view_log
             ORDER BY view_date DESC
-            LIMIT 10
+            LIMIT ?,?
             ) AS top10
         ON listing.listingID = top10.listingID
         WHERE userID = ?`
 
-        db.query(sql, req.userData.userID, (error, results) => {
+        // query the database
+            db.query(sql, [req.pageOffset,req.listingsPerPage,req.userData.userID], (error, results) => {
             if (error) {
-                customErrorLogger.logServerError(res, error, "Recent Listing Error")
+                customLog.sendServerError(res, error, "Recent Listing Error")
+
             } else {
-                console.log('Recent Listings Sent Successfully')
-                sendJson(res, DEBUG,{
-                    "message": 'Recent Listings Fetched Succesfully',
-                    "listings": intToBoolScraper.intToBool(results)
+
+                // convert sql bool to true false
+                results = results.map((listing) => {
+                    listing.isActive = listing.isActive == "1" ? true : false
+                    return listing
+                })
+
+                // send data to client
+                customLog.sendJson(res, {
+                    "message": 'Recent Listings Fetched ',
+                    "listings": results
                 })
             }
         })
     });
 
-    app.get('/getFrontPageListings', (req, res) => {
-        // checks if user has provided an integer page number to load
-        const listingsPerPage = 10;
-        pageNum = req.query.pageNum ? req.query.pageNum : 0
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
+    // fetch front page listings
+    app.get('/getFrontPageListings', addPageOffsetToReq, (req, res) => {
 
         let sql = `SELECT *
                 FROM listing
@@ -201,30 +264,46 @@ module.exports = function (app, db) {
                 LIMIT ?, ?
                 `
 
-        db.query(sql, [pageOffset, listingsPerPage], (error, results) => {
-
+        // query the database
+        db.query(sql, [req.pageOffset, req.listingsPerPage], (error, results) => {
             if (error) {
-                customErrorLogger.logServerError(res, error, error.message)
+                customLog.sendServerError(res, error, error.message)
+
             } else if (results[0]) {
-                console.log("Front page Listings sent succesfully")
-                sendJson(res,DEBUG,{
-                    'message': "Fetched Succefully",
-                    'listings': intToBoolScraper.intToBool(results)
+
+                // convert sql bool to true false
+                results = results.map((listing) => {
+                    listing.isActive = listing.isActive == "1" ? true : false
+                    return listing
+                })                
+
+                // if at least one result is found
+                // send data to client
+                customLog.sendJson(res, {
+                    'message': "Front Page Listings Fetched",
+                    'listings': results
                 })
+
             } else {
-                customErrorLogger.logServerError(res, new Error('No Entries Exist'))
+                customLog.sendServerError(res, new Error('No Entries Exist'),'No Entries Exist')
             }
         })
 
     });
 
-    app.get('/getFilteredListings', (req, res) => {
-        const listingsPerPage = 10
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
+    // fetch listings filtered by a search query
+    app.get('/getFilteredListings', addPageOffsetToReq, (req, res) => {
+        customLog.connectionStart("Fetching Filtred Results")
+        customLog.incomingData(req.query.searchString,"search query")
         
+        // separate the search string into individual words
         searchStringArray = req.query.searchString.split(" ")
+
+        // convert each word to lowercase
         searchStringArray = searchStringArray.map((tag) => {return tag.toLowerCase()})
-        searchStringArray = listingPromises.pruneNonTagsFrom(searchStringArray)
+
+        // remoove any words that arent tags eg; the, or and and
+        searchStringArray = tagPruner.pruneNonTagsFrom(searchStringArray)
 
 
         let sql = `SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
@@ -232,23 +311,55 @@ module.exports = function (app, db) {
             WHERE tagID
             IN (SELECT tagID FROM tags WHERE tagName IN ? )) ORDER BY isActive DESC LIMIT ?, ?`
 
-        db.query(sql, [[searchStringArray] ,pageOffset, listingsPerPage],
+        // query the database
+            db.query(sql, [[searchStringArray] ,req.pageOffset, req.listingsPerPage],
             (error, results) => {
                 if (error) {
-                    customErrorLogger.logServerError(res, error, 'Filter listing error')
+                    customLog.sendServerError(res, error, 'Filter listing error')
+
                 } else {
-                    console.log('Filtered Results Sent Succesfully')
-                    sendJson(res,DEBUG,{
-                        "message": 'Filtered Results Fetched Succesfully',
-                        "listings": intToBoolScraper.intToBool(results)
+
+                    // convert sql bool to true false
+                results = results.map((listing) => {
+                    listing.isActive = listing.isActive == "1" ? true : false
+                    return listing
+                })
+
+                    // send data to client
+                    customLog.sendJson(res, {
+                        "message": 'Filtered Results Fetched ',
+                        "listings": results
                     })
+
                 }
             })
     });
 
-    app.get('/auth/getRecentListings', Auth.checkToken, (req, res) => {
-        const listingsPerPage = req.query.listingsPerPage
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
+    // fetch listings created by a user
+    app.get('/getUserListings', addPageOffsetToReq, () => {
+        customLog.connectionStart("Fetching User Listings")
+        customLog.incomingData(req.query.userID,"user ID")
+
+        // append the database connection to the request object
+        req.db = db
+
+        listingPromises.getUserListings(req)
+            .then((req) => {
+                customLog.sendJson({
+                    "message" : "User Listings Fetched",
+                    "listings" : req.listings
+                })
+            })
+            .catch((error) => {
+                customLog.sendServerError(res, error, error.message)
+            })
+
+    })
+
+    // fetch a users recently viewed listings
+    app.get('/auth/getRecentListings', Auth.checkToken, addPageOffsetToReq, (req, res) => {
+        customLog.connectionStart("Fetching Recently Viewed Listings")
+        customLog.incomingData(req.userData.userID,"user ID")
 
         let sql = `SELECT *
         FROM listing
@@ -261,22 +372,31 @@ module.exports = function (app, db) {
         ON listing.listingID = top10.listingID
         WHERE userID = ?`
 
-        db.query(sql, [pageOffset, listingsPerPage, req.userData.userID], (error, results) => {
+        // query the database
+            db.query(sql, [req.pageOffset, req.listingsPerPage, req.userData.userID], (error, results) => {
             if (error) {
-                customErrorLogger.logServerError(res, error, "Recent Listing Error")
+                customLog.sendServerError(res, error, "Recent Listing Error")
+
             } else {
-                console.log('Recent Listings Sent Successfully')
-                sendJson(res, DEBUG,{
-                    "message": 'Recent Listings Fetched Succesfully',
-                    "listings": intToBoolScraper.intToBool(results)
+                
+                // convert sql bool to true false
+                results = results.map((listing) => {
+                    listing.isActive = listing.isActive == "1" ? true : false
+                    return listing
+                })
+
+                // send data to client
+                customLog.sendJson(res, {
+                    "message": 'Recent Listings Fetched ',
+                    "listings": results
                 })
             }
         })
     });
 
-    app.get('/getDesiredItems', (req, res) => {
-        const listingsPerPage = 10
-        let pageOffset = getSQLPageOffset(listingsPerPage, req.query.pageNum)
+    // fetches desired items
+    app.get('/getDesiredItems', addPageOffsetToReq, (req, res) => {
+        customLog.connectionStart("Fetching Desired Items")
 
         let sql = `SELECT * FROM tags
         JOIN (SELECT count(userID), tagID FROM wanted_tags
@@ -284,33 +404,39 @@ module.exports = function (app, db) {
         ORDER BY count(userID)) AS wantedTags ON tags.tagID = wantedTags.tagID
         LIMIT ?, ?`
 
-        db.query(sql, [pageOffset, listingsPerPage], (error, results) => {
+        // query the database
+            db.query(sql, [req.pageOffset, req.listingsPerPage], (error, results) => {
             if (error) {
-                console.log('Get Desired Items Error: ', error)
-                customErrorLogger.logServerError(res, error, "Desired Items Fetch Error")
+                customLog.sendServerError(res, error, "Desired Items Fetch Error")
+
             } else {
-                console.log("Desired Items Fetched Succesfully")
-                sendJson(res, DEBUG,{
-                    "message": 'Desired Items Fetched Succesfully',
+                
+                // send data to client
+                customLog.sendJson(res, {
+                    "message": 'Desired Items Fetched',
                     "tags": results
                 })
             }
         });
     });
 
+    // delete a listing
     app.delete('/auth/deleteListing', Auth.checkToken, (req, res) => {
+        customLog.connectionStart("Deleting Listing")
+
+        // appends the databse connection to the request object
         req.db = db
+
         // body.listingID
 
         listingPromises.checkUserIsAuthor(req)
             .then(imagePromises.fetchImageIDs)
             .then(imagePromises.deleteImages)
             .then(listingPromises.deleteListing)
-            .then(() => console.log("Listing Succesfully Deleted"))
-            .then(() => res.send({
-                "message": "Listing Succesfully Deleted"
-            }))
-            .catch((error) => { customErrorLogger.logServerError(res, error) })
+            .then(() => {
+                // send data to the client
+                res.send({"message": "Listing  Deleted" })
+            })
+            .catch((error) => { customLog.sendServerError(res, error, error.message) })
     });
-
 }

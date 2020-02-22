@@ -1,55 +1,78 @@
-const nodemailer = require('nodemailer');
-const Auth = require('../Authentication/AuthenticationHelper')
-const crypto = require('crypto');
+const nodemailer = require('nodemailer'); // import nodemailer (used to send emails)
+const Auth = require('../Authentication/AuthenticationHelper') // import athentication helper
+const crypto = require('crypto') // import crypto to generate 
+const customLog = require('../../helpers/CustomLogs') // custom logger
 
-/// to send veriffication email, send email to email provided in the user email with random code generated
-
-var buildUrl = (systemIPandPort, verifficationId, username) => {
+// generate a url that a user can click to verrify their email
+var buildVerifficationUrl = (systemIPandPort, verifficationId, username) => {
     return 'http://' + systemIPandPort + '/verifyEmail?verification=' + verifficationId.toString() + "&username=" + username
 }
 
-var getEmail = (db, userId) => new Promise((resolve, reject) => {
-    db.query(`SELECT email FROM user_profile WHERE userID = ?`,userId, (error, results) => {
+// fetch a users email adress
+var getUserEmail = (db, userId) => new Promise((resolve, reject) => {
+
+    let sql = `SELECT email FROM user_profile WHERE userID = ?`
+
+    // execute sql
+    db.query(sql, userId, (error, results) => {
         if (error) {
             reject(error)
+
         } else if (results[0]) {
+            // if at least one user has been found
             resolve(results[0].email)
-        } else { }
+
+        } else {
+            reject(new Error("No User Found"))
+        }
     })
 })
 
-
+// email the verrification url to the user
 module.exports.sendAccountVerification = async req => {
-    let testVar = req
-    userEmail = await getEmail(req.db, req.userData.userID)
+    
+    // asynchronously get the users email
+    userEmail = await getUserEmail(req.db, req.userData.userID)
+
+    // asynchronously get the users username
     username = await Auth.getUsername(req.userData.userID)
 
-    var verifID = crypto.randomBytes(20).toString('hex');
-    var verifficationLink = buildUrl("82.3.163.116:1234", verifID, username)
+    // generate a random secure 20 character code to act as a verrification code
+    var verrificationCode = crypto.randomBytes(20).toString('hex');
 
+    // generate a clickable url to send to the user
+    var verifficationLink = buildVerifficationUrl("82.3.163.116:1234", verrificationCode, username)
+
+    // create a nodemailer instance
     let transporter = nodemailer.createTransport({
         service: 'gmail',
+
         auth: {
             user: 'reconstructnoreply@gmail.com',
             pass: 'raketa15'
         }
     });
 
+    // email data that is sent to the user
     let emailDetails = {
-        from: '"reConstruct Team" <reconstructnoreply@gmail.com>', // sender address
-        to: userEmail, // list of receivers
-        subject: 'Please verrify your email', // Subject line
+        from: '"ReConstruct Team" <reconstructnoreply@gmail.com>', // sender address
+        to: userEmail, // users email
+        subject: 'Please verrify your email',
         text: 'Hi,\n please click on the link bellow to verify your email \n\n' + verifficationLink, // plain text body
         html: '<b>Hi,<br> please click on the link bellow to verify your email <br><br>' + verifficationLink + '</b>' // html body
     }
-
-    await Auth.saveEmailVerificationCode(verifID, req.userData.userID)
+    // asynchronously save the verrification code into the database
+    // then send the email to the user
+    await Auth.saveEmailVerificationCode(verrificationCode, req.userData.userID)
         .then(transporter.sendMail(emailDetails))
-        .then(() => {
-            console.log('verrification code sent succesfully')
-        }).catch()
+        .catch((error) => {
+            throw error
+        })
+    
+    customLog.prommiseResolved("Verrification Email Sent")
 
-    return testVar
+    // resolve
+    return req
 
 };
 

@@ -1,77 +1,113 @@
-const uniqueID = require('uniqid')
-const customErrors = require("../../helpers/CustomErrors")
-const fs = require('fs')
+const customLog = require("../../helpers/CustomLogs")   // import custom logger
+const fs = require('fs')    // import file system
 
+// generate an image path programmaticaly
 var genImagePath = (image_name) => {
     return path.join(__dirname, "../../../ImageStorage/" + image_name + ".jpg")
 }
 
+// check if a file exists
 module.exports.checkFileExists = req => new Promise((resolve, reject) => {
+
+    // get image path
     let imagePath = genImagePath(req.query.imageID)
-    fs.access(imagePath, fs.F_OK, (err) => {
-        if (err) {
-            if(err.message.slice(0,6) === "ENOENT"){
-                console.log("imageId = ", imagePath)
-                customErrors.logUserError(req.res,"image does not exist", 404)
-            } else {
-                customErrors.logServerError(req.res,err)
-            }
+    
+    // try and read the image
+    fs.access(imagePath, fs.F_OK, (error) => {
+        if (error) {
+            reject(error)
+
         } else {
+            customLog.prommiseResolved("image exists")
             resolve(req)
         }
     })
 });
 
-module.exports.sendImageFile = (req, res) => {
+// send an image file
+module.exports.sendImageFile = (req) => {
     imageID = req.query.imageID
 
+    // generate image path
     imagePath = genImagePath(imageID)
-    res.append("message", "image fetched succesfully")
-    res.append("imageID", imageID)
-    res.sendFile(imagePath)
+
+    // append a message to the request
+    req.res.append("message", "image fetched ")
+
+    // append the image id to the request
+    req.res.append("imageID", imageID)
+
+    // send the file
+    req.res.sendFile(imagePath)
+
+    customLog.connectionFinish("File Sent")
+    
 }
 
+// fetch all image IDs of items in a listing
 module.exports.fetchImageIDs = req => new Promise((resolve, reject) => {
-    let sqlSelect = `SELECT imageID FROM listing_item_images WHERE
+
+    let sql = `SELECT imageID FROM listing_item_images WHERE
                 listingItemID IN
                 (SELECT listingItemID
                     FROM listing_item
                     WHERE listingID = ? )`
 
-    req.db.query(sqlSelect, [req.query.listingID], (error, result) => {
+    // execute sql
+    req.db.query(sql, req.query.listingID, (error, result) => {
         if (error) {
             reject(error)
-        } else if (result[0]) {
-            req.selectedImages = result
-            resolve(req)
+
         } else {
-            req.selectedImages = "empty"
+            req.selectedImages = result
+            customLog.prommiseResolved("listing images fetched")
             resolve(req)
         }
     })
 })
 
+// delete a list of images
 module.exports.deleteImages = req => new Promise((resolve, reject) => {
-    console.log(req.selectedImages)
-    if (req.selectedImages == "empty") {
-        console.log('no images to delete')
-        resolve(req)
-    }
+    customLog.incomingData(req.selectedImages, "images to delete")
 
-    deleteFiles(req.selectedImages)
-        .then(() => console.log('Images Deleted'))
-        .then(() => resolve(req))
+    // checks if the list of images to delete is empty
+    if (!req.selectedImages[0]) {
+        customLog.prommiseResolved('no images to delete')
+        resolve(req)
+    } else {
+
+        // delete the files in the list
+        deleteFiles(req.selectedImages)
+        .then(() => {
+            customLog.prommiseResolved('Images Deleted')
+            resolve(req)}
+            )
         .catch(error => reject(error))
+    }  
 })
 
+
+// a recursive function that deletes files
 const deleteFiles = (arr) => new Promise((resolve, reject) => {
+
+    // check if the array is not empty
     if (arr.length != 0) {
+
+        // delete the file
+        // the array is popped, then the popped value is passed to the genImagePath function 
+        // which generates the image path and this is passed to the unlink function which deletes the file
         fs.unlink(genImagePath(arr.shift().imageID), (error) => {
+
             if (error) {
                 reject(error)
+
             } else {
+                // call itsself then once it has resolved, resolve up
                 deleteFiles(arr).then(resolve)
             }
         })
-    } else { resolve() }
+    } else { 
+        // if the list of files to delete is empty, resolve
+        resolve() 
+    }
 })

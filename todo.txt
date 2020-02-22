@@ -1,0 +1,15 @@
+Accounts:
+    update user data
+    update username prommise
+    add to watch list
+    remove from watch list
+    change wanted tags prommise
+    reset password
+
+
+
+
+
+
+
+SET ROUTINES ON AWS

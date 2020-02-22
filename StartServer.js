@@ -1,10 +1,13 @@
 const bodyParser = require('body-parser'); // parses incoming JSON data
 const app = require('express')(); // initialise the application framework
 const mysql = require('mysql'); // sql connection manager
+const routines = require("./app/helpers/Routines") // custom routines
 
-// debugging options
-module.exports.DEBUG = {debug: true, values: true, json: true}
+// debug toggle
+// for further options look in Debug.js
+module.exports.DEBUG = true;
 
+// sql connection parammeters
 const port = 8080;
 const dbhost = "localhost";
 const dbuser = "ServerData";
@@ -31,5 +34,5 @@ require('./app/index')(app, database);
 // start server
 app.listen(port, () => {
   console.log('Server is live on ' + port);
-  require("./app/helpers/Routines")(database) // starts my routines
+  routines(database) // starts my routines
 });

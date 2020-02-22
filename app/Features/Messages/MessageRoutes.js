@@ -1,15 +1,23 @@
-const Auth = require('../Authentication/AuthenticationHelper');
-const customErrors = require('../../helpers/CustomErrors')
+const Auth = require('../Authentication/AuthenticationHelper')
+const customLog = require('../../helpers/CustomLogs')
+const debug = require('../../../StartServer').DEBUG
 
 module.exports = (app, db) => {
+ 
+    // send a message
     app.post('/sendMessage', Auth.checkToken, (req, res) => {
+        // log start of request
+        customLog.connectionStart("Sending Message")
+        
+        // generate an new id for the message id
         Auth.genID((messageID) => {
             let sql = `INSERT INTO message_history
                         (messageID,senderID,targetID,title,body)
                         VALUES ?`
             db.query(sql, [[messageID, req.userData.userID, req.query.targetID, req.query.title, req.query.body]], (error, results) => {
                 if (error) {
-                    logServerError(res, error, "Send Message Error")
+                    customLog.sendServerError(res, error, "Send Message Error")
+
                 } else {
                     console.log('User Message Sent Successfully')
                     res.json({
@@ -21,20 +29,33 @@ module.exports = (app, db) => {
     });
 
     app.get('/getUserMessages', Auth.checkToken, (req, res) => {
+        // log start of request
+        customLog.connectionStart("Fetching User Messages")
+
         db.query(`SELECT *
     FROM message_history
-    WHERE targetID = ?`, [req.userData.userID], (error, results) => {
+    WHERE targetID = ?`, req.userData.userID, (error, results) => {
             if (error) {
-                customErrors.logServerError(res, error, 'Message Fetch Error')
+                customLog.sendServerError(res, error, 'User Message Fetch Error')
+
             } else if (results[0]) {
+                // if the result object contains at least one entry
+                
                 console.log('User Messages Fetched Successfully')
                 res.json({
                     "message": 'Messages Fetched Successfully',
                     "body": results
                 })
             } else {
-                customErrors.logUserError(res, 'No Messages Found', 400)
+                customLog.sendUserError(res, 'No Messages Found', 400)
             }
         })
     });
+
+    /* TODO
+     add fetch message route that just returns message and marks it as read unless user who sent it requested it
+    */
+
+
+
 }

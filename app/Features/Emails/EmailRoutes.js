@@ -1,19 +1,27 @@
-const accountPromises = require('../Accounts/AccountPromises');
-const customErrors = require('../../helpers/CustomErrors')
-const Auth = require('../Authentication/AuthenticationHelper')
+const accountPromises = require('../Accounts/AccountPromises')  // import account promisses
+const customLog = require('../../helpers/CustomLogs')   // import custom logger
+const Auth = require('../Authentication/AuthenticationHelper')  // import authentication helper
 
 module.exports = (app, db) => {
+
+    // verify an email
     app.get('/verifyEmail', (req, res) => {
-        if (true){console.log("==== VERIFYING EMAIL ====")}
+        customLog.connectionStart("Verifying Email")
+        customLog.incomingData(req.query.username, "username")
+        customLog.incomingData(req.query.verification, "verrification code")
+        
+        // append the database connection to the request object
         req.db = db
+        
+        // check if the code provided by the client is valid
+        // then set their email as being verified
         Auth.verifyEmailVerificationCode(req)
             .then(accountPromises.setEmailVerified)
-            .then(() => res.json({
-                "message": "Email Validated Succesfully!"
+            .then(() => customLog.sendJson(res,{
+                "message": "Email Validated"
             }))
-            .catch((err) => {
-                customErrors.logUserError(res,err.message,404)
-                console.log(err);
+            .catch((error) => {
+                customLog.sendServerError(res,error, error.message)
             });
     })
 }

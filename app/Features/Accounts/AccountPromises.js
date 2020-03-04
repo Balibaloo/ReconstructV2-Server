@@ -1,4 +1,4 @@
-const Auth = require('../Authentication/AuthenticationHelper'); // import authentication helper
+const Auth = require('../../helpers/AuthenticationHelper'); // import authentication helper
 const customLog = require('../../helpers/CustomLogs') // import custom logger
 
 //****************************************************************************//
@@ -28,7 +28,7 @@ module.exports.setEmailVerified = req => new Promise((resolve, reject) => {
 })
 
 // save user data
-module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
+module.exports.saveUser = req => new Promise((resolve, reject) => {
     customLog.prommiseStarted("Saving User main")
 
     // generate a userID
@@ -40,11 +40,11 @@ module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
         // insert user
         req.db.query(`INSERT INTO user_profile (userID, fName, lName, email, phone)
                     VALUES ?`,
-            [[req.userData.userID, req.query.first_name, req.query.last_name, req.query.email, req.query.phone]],
+            [[[req.userData.userID, req.body.first_name, req.body.last_name, req.body.email, req.body.phone]]],
             (error, result) => {
                 if (error) {
                     error.details = 'saving main user'
-                    reject(req)
+                    reject(error)
 
                 } else {
                     customLog.prommiseResolved('main User Saved')
@@ -56,7 +56,22 @@ module.exports.saveUserPromise = req => new Promise((resolve, reject) => {
 
 //****************************************************************************/
 // Update Username
-module.exports.setUsername = req => new Promise((resolve, reject) => {
+module.exports.setUserDetails = req => new Promise((resolve, reject) => {
+    
+    // update user
+    req.db.query(`UPDATE user_profile SET fName = ?, lName = ?, email = ?, phone = ?
+                WHERE `,
+        [[[req.userData.userID, req.body.first_name, req.body.last_name, req.body.email, req.body.phone]]],
+        (error, result) => {
+            if (error) {
+                error.details = 'saving main user'
+                reject(error)
+
+            } else {
+                customLog.prommiseResolved('main User Saved')
+                resolve(req)
+            }
+        })
 
 })
 

@@ -1,4 +1,4 @@
-const Auth = require('../Authentication/AuthenticationHelper') // import authentication helper
+const Auth = require('../../helpers/AuthenticationHelper') // import authentication helper
 const customLog = require('../../helpers/CustomLogs')   // import custom logger
 const tagPruner = require('../../helpers/tagPruner')    // import tag pruner
 const uniqueID = require('uniqid') // import id generator
@@ -6,8 +6,6 @@ const uniqueID = require('uniqid') // import id generator
 //// Create A Listing
 // insert a listing entry into the listing table
 module.exports.insertMainListing = req => new Promise((resolve, reject) => {
-
-
 
     // generate a new id for the listing
     Auth.genID((listingID) => {
@@ -17,13 +15,19 @@ module.exports.insertMainListing = req => new Promise((resolve, reject) => {
             title,
             body,
             end_date,
-            location_lat, 
+            location_lat,
             location_lon,
             mainImageID
         } = req.body
         
         // add the listing id to the request object for future reference
-        req.userData.listingID = listingID
+        req.query.listingID = listingID
+
+
+        // this value skips author == userid check for insert a view for a listing
+        req.userData.fistView = true
+        req.listing = {}
+        req.listing.authorID = req.userData.userID
 
         // convert ISO standard date to SQL date
         end_date = end_date.replace("T"," ").replace("Z","")
@@ -59,7 +63,7 @@ module.exports.insertListingItems = req => new Promise((resolve, reject) => {
 
     // extracts data from the list of items to be inserted via SQL
     itemListToInsert = req.body.itemList.map((item) => {
-        return [item.itemID, req.userData.listingID, item.name, item.description]
+        return [item.itemID, req.query.listingID, item.name, item.description]
     })
 
     const sql = `INSERT INTO listing_item (listingItemID, listingID, name, description) VALUES ?`
@@ -108,14 +112,12 @@ module.exports.insertNewTags = req => new Promise((resolve, reject) => {
 
     // every peice of text is used as a tag and then non keywords are filtered out of the tagList
     keywordList = getAllListingWords(req.body)
-    keywordList = tagPruner.pruneNonTagsFrom(keywordList)
 
     // creating a set eliminates repeating tags    
-    req.query.tagNameArray = Array.from(new Set(keywordList))
+    req.body.tagNameArray = Array.from(new Set(keywordList))
 
     // wraps every tag in an array so that the tag list is not treated as one entry in the database 
-    let nestedTagArr = req.query.tagNameArray.map((item) => { return [item] })
-
+    let nestedTagArr = req.body.tagNameArray.map((item) => { return [item] })
 
     let sql = `INSERT IGNORE INTO tags (tagName) VALUES ? `
     
@@ -138,13 +140,19 @@ let getAllListingWords = (body) => {
     // adds listing title and body into the allWords string
     allText += body.title + " " + body.body
 
-    // adds every item name and description to the allWords String
+    // adds item text to the allWords String
     body.itemList.forEach((item) => {
-        allText += item.name + " " + item.description
+        allText +=  " " + getAllItemWords(item)
     }) 
     
+
     // splits the allText string into a list of all the words in a listing
-    return allText.split(" ")
+    return tagPruner.pruneNonTagsFrom(allText.split(" "))
+}
+
+// retreive all item text
+let getAllItemWords = (item) => {
+    return item.name + " " + item.description + " "
 }
 
 // 
@@ -153,20 +161,27 @@ module.exports.replaceTagsWithIDs = req => new Promise((resolve, reject) => {
     let sql = `SELECT * FROM tags WHERE tagName IN ?`
 
     // fetch tags and tag ids from the databse
-    req.db.query(sql, [req.query.tagNameArray], (error, results) => {
+    req.db.query(sql, [[req.body.tagNameArray]], (error, results) => {
         if (error) {
             reject(error)
 
         } else {
             // parses the results into a dictionary 
             tagNameIdDictionary = tagResultListToDicionary(results)
-            
+
 
             // replaces the tags in each item with the ids of the tags
+            // filters undefined tags
             req.body.itemList = req.body.itemList.map((item) => {
                 
-                item.tagList = item.tagList.map((tagName) => {
+                item.tagList = getAllItemWords(item).split(" ").map((tagName) => {
+                    
+                    // replace tag name with id
                     return tagNameIdDictionary[tagName]
+                }).filter((tagID) => {
+
+                    // checks if a tag id is defined
+                    return tagID
                 })
                 return item
             })
@@ -184,13 +199,13 @@ module.exports.insertItemTags = req => new Promise((resolve, reject) => {
     
     // adds tagID,itemID and listingID to an array to be inserted into the database
     req.body.itemList.forEach((item) => {
-        item.tagList.forEach((tagID) => { finalDataArray.push([tagID, item.itemID, req.userData.listingID]) })
+        item.tagList.forEach((tagID) => { finalDataArray.push([tagID, item.itemID, req.query.listingID]) })
     })
 
     let sql = `INSERT INTO listing_item_tags (TagID,listingItemID,listingID) VALUES ?`
 
     // insert data into the listing_item_tags table
-    db.query(sql, [finalTagArray], (error) => {
+    req.db.query(sql, [finalDataArray], (error) => {
         if (error) {
             error.details = "tag Save Error"
             reject(error)
@@ -218,7 +233,7 @@ var tagResultListToDicionary = (tagDataList) => {
 module.exports.logListingView = req => new Promise((resolve,reject) => {
 
     // check that the client is not the author of the listing
-    if (req.userData.userID != req.listing.authorID) {
+    if (req.userData.userID != req.listing.authorID || req.userData.fistView) {
         
         // generate an id for the visit
         Auth.genID((viewID) => {
@@ -226,7 +241,7 @@ module.exports.logListingView = req => new Promise((resolve,reject) => {
         let sql = "INSERT INTO view_log (viewID,userID,listingID) VALUES ?"
 
         // insert the view
-        req.db.query(sql,[[[viewID, req.userData.userID, req.userData.listingID]]], (error) => {
+        req.db.query(sql,[[[viewID, req.userData.userID, req.query.listingID]]], (error) => {
             if (error){
                 error.details = "logging view to listing"
                 reject(error)
@@ -253,6 +268,7 @@ module.exports.getListing = req => new Promise((resolve, reject) => {
     req.db.query(`SELECT *
                 FROM listing
                 WHERE listingID = ?`, [req.query.listingID], (error, results) => {
+
         if (error) {
             error.details = 'fetch main listing'
             reject(error)
@@ -318,41 +334,6 @@ module.exports.getListingItems = req => new Promise((resolve, reject) => {
     })
 
 });
-
-// module.exports.getListingItemTags = req => new Promise((resolve, reject) => {
-
-//     let sql = `SELECT * FROM tags
-//     JOIN (SELECT tagID,listingItemID
-//         FROM listing_item_tags
-//         WHERE listingID  = ?) AS itemFilteredTags
-//     ON tags.tagID = itemFilteredTags.tagID`
-
-//     req.db.query(sql, req.listing.listingID, (error, results) => {
-//         if (error) {
-            
-//             error.details = 'listing Tag fetch error'
-//             reject(error)
-//         } else if (results[0]) {
-//             //matches tagIds to listings using listing item id
-
-//             req.listing.itemList = req.listing.itemList.map((item) => {
-//                 item.tagList = []
-//                 results.filter((tagIDpair) => {
-//                     if (tagIDpair.listingItemID == item.listingItemID) {
-//                         item.tagList.push(tagIDpair.tagName)
-//                         return false
-//                     } else { return true }
-//                 })
-//                 return item
-//             })
-//             console.log("Fetched Listing Item Tags")
-//             resolve(req)
-//         } else {
-//             error = new Error('no listing tags found')
-//             reject(error)
-//         }
-//     })
-// });
 
 // atatches image ids to items
 module.exports.atachImageIds = req => new Promise((resolve,reject) => {

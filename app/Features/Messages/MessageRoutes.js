@@ -1,4 +1,4 @@
-const Auth = require('../Authentication/AuthenticationHelper')
+const Auth = require('../../helpers/AuthenticationHelper')
 const customLog = require('../../helpers/CustomLogs')
 const debug = require('../../../StartServer').DEBUG
 
@@ -15,6 +15,7 @@ module.exports = (app, db) => {
                         (messageID,senderID,targetID,title,body)
                         VALUES ?`
             db.query(sql, [[messageID, req.userData.userID, req.query.targetID, req.query.title, req.query.body]], (error, results) => {
+
                 if (error) {
                     customLog.sendServerError(res, error, "Send Message Error")
 
@@ -51,6 +52,9 @@ module.exports = (app, db) => {
             }
         })
     });
+
+
+    
 
     /* TODO
      add fetch message route that just returns message and marks it as read unless user who sent it requested it

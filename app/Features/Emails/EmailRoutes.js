@@ -1,6 +1,6 @@
 const accountPromises = require('../Accounts/AccountPromises')  // import account promisses
 const customLog = require('../../helpers/CustomLogs')   // import custom logger
-const Auth = require('../Authentication/AuthenticationHelper')  // import authentication helper
+const Auth = require('../../helpers/AuthenticationHelper')  // import authentication helper
 
 module.exports = (app, db) => {
 

@@ -6,10 +6,10 @@ module.exports.DEBUG = {
     prommisesStarting:true,
 
     // when a prommise resolves
-    prommisesResolving: true,
+    prommiseResolved: true,
     
     // when a new request is received
-    connecionStart:true,
+    connectionStart:true,
 
     // when the request is handled
     connectionFinish:true,

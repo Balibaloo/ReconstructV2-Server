@@ -2,7 +2,7 @@ const customLog = require('../../helpers/CustomLogs')   // import custom logger
 const listingPromises = require('./ListingsPromises')   // import listing promisses
 const imagePromises = require('../Images/imagePromises')    // import image promises
 const tagPruner = require('../../helpers/tagPruner')    // import tag pruner
-const Auth = require('../Authentication/AuthenticationHelper')  // import authentication helper
+const Auth = require('../../helpers/AuthenticationHelper')  // import authentication helper
 
 //calculates the ammount of items to skip sending
 var calculatePageOffset = (itemsPerPage, pageNumber) => {
@@ -21,7 +21,7 @@ var calculatePageOffset = (itemsPerPage, pageNumber) => {
 var addPageOffsetToReq = (req,res,next) => {
 
     // checks if the client has provided the number of listings to load per page
-    req.listingsPerPage = req.query.listingsPerPage ? listingsPerPage : 10
+    req.listingsPerPage = req.query.listingsPerPage ?  parseInt(req.query.listingsPerPage) : 10
 
     // checks if the client has provided a page nuumber to load
     pageNum = req.query.pageNum ? req.query.pageNum : 0
@@ -57,7 +57,7 @@ module.exports = function (app, db) {
                 // send data to client
                 customLog.sendJson(res, {
                     "message": 'Listing Saved Successfully',
-                    "listingID": req.userData.listingID
+                    "listingID": req.query.listingID
                 })
 
                 
@@ -124,7 +124,7 @@ module.exports = function (app, db) {
                 .then(listingPromises.getListingItems)
                 // .then(listingPromises.getListingItemTags)
                 .then(listingPromises.atachImageIds)
-                .then(listingPromises.saveViewRequest)
+                .then(listingPromises.logListingView)
                 .then((req) => {
 
                     // send data to client
@@ -181,7 +181,7 @@ module.exports = function (app, db) {
     // fetch all listings of a user
     app.get("/getUserListings", (req, res) => {
         customLog.connectionStart("Fetching User Listings")
-        customLog.incomingData(req.userData.userID,"user ID")
+        customLog.incomingData(req.query.userID,"user ID")
 
         let sql = `SELECT * FROM listing
                     WHERE authorID = ?
@@ -251,6 +251,8 @@ module.exports = function (app, db) {
 
     // fetch front page listings
     app.get('/getFrontPageListings', addPageOffsetToReq, (req, res) => {
+        customLog.connectionStart("Fetching Front Page Listings")
+
 
         let sql = `SELECT *
                 FROM listing
@@ -293,7 +295,7 @@ module.exports = function (app, db) {
 
     // fetch listings filtered by a search query
     app.get('/getFilteredListings', addPageOffsetToReq, (req, res) => {
-        customLog.connectionStart("Fetching Filtred Results")
+        customLog.connectionStart("Fetching Filtred Listings")
         customLog.incomingData(req.query.searchString,"search query")
         
         // separate the search string into individual words
@@ -305,14 +307,32 @@ module.exports = function (app, db) {
         // remoove any words that arent tags eg; the, or and and
         searchStringArray = tagPruner.pruneNonTagsFrom(searchStringArray)
 
+        if (searchString == []) {
 
-        let sql = `SELECT * FROM listing WHERE listingID IN (SELECT DISTINCT listingID
-            FROM listing_item_tags
-            WHERE tagID
-            IN (SELECT tagID FROM tags WHERE tagName IN ? )) ORDER BY isActive DESC LIMIT ?, ?`
+            customLog.sendUserError(res, "search cannot be empty", 404)
 
+        } else {
+            
+            customLog.values(searchStringArray,"search tags")
+
+        let sql = `
+            SELECT * FROM listing WHERE listingID IN 
+                (
+                    SELECT listingID
+                    FROM listing_item_tags
+                    WHERE tagID
+                    IN (
+                        SELECT tagID FROM tags WHERE tagName IN ?
+                        )
+                    GROUP BY listingID
+                    ORDER BY COUNT(listingID) DESC
+                )
+            ORDER BY isActive DESC LIMIT ?, ?;
+            `
+ 
+    
         // query the database
-            db.query(sql, [[searchStringArray] ,req.pageOffset, req.listingsPerPage],
+        db.query(sql, [[searchStringArray] ,req.pageOffset, req.listingsPerPage],
             (error, results) => {
                 if (error) {
                     customLog.sendServerError(res, error, 'Filter listing error')
@@ -333,6 +353,10 @@ module.exports = function (app, db) {
 
                 }
             })
+
+        }
+
+        
     });
 
     // fetch listings created by a user
@@ -345,7 +369,7 @@ module.exports = function (app, db) {
 
         listingPromises.getUserListings(req)
             .then((req) => {
-                customLog.sendJson({
+                customLog.sendJson(req.res,{
                     "message" : "User Listings Fetched",
                     "listings" : req.listings
                 })

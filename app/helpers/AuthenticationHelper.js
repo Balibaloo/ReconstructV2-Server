@@ -1,8 +1,8 @@
 var mysql = require('mysql')    // import mysql
 var bcrypt = require('bcrypt')  // import bcrypt (base 64 en/decoding)
 var uniqueID = require('uniqid')    // import id generator
-var customLog = require('../../helpers/CustomLogs') // import custom logger
-const DEBUG = require("../../../StartServer").DEBUG
+var customLog = require('./CustomLogs') // import custom logger
+const DEBUG = require("../../StartServer").DEBUG
 
 const dbhost = "localhost";
 const dbuser = "ServerAuther";
@@ -34,15 +34,15 @@ module.exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
     req.userData.username = decodedUP[0]
     req.userData.password = decodedUP[1]
 
-    customLog.values(decodedUP,"decoded U,P")
+    customLog.values(decodedUP, "decoded U,P")
     customLog.prommiseResolved("B64 Decoded")
     resolve(req)
 })
 
 // middleware that checks if the token provided with a request is valid
 module.exports.checkToken = (req, res, next) => {
-    customLog.prommiseStarted("Checking Token")
-    customLog.incomingData(req.headers,"headers")
+    customLog.connectionStart("Checking Token")
+    customLog.incomingData(req.headers.authorization, "authentication header")
 
     // checks if the token field is not empty and contains at least 2 space separated strings
     if (req.headers.authorization && req.headers.authorization.split(' ')[1]) {
@@ -55,7 +55,7 @@ module.exports.checkToken = (req, res, next) => {
             customLog.values(userToken, "user token")
 
             // select all tokens matching provided token
-            authenticationDatabase.query(`SELECT * FROM alltokens WHERE Token = ?`,userToken,
+            authenticationDatabase.query(`SELECT * FROM alltokens WHERE Token = ?`, userToken,
                 (error, result) => {
                     if (error) {
                         customLog.sendServerError(res, error, error.message)
@@ -64,7 +64,7 @@ module.exports.checkToken = (req, res, next) => {
                         // if at least one token is found
 
                         result = result[0]
-                        customLog.values(result,"user")
+                        customLog.values(result, "user")
 
                         // append user information to the request object
                         req.userData = {}
@@ -94,7 +94,7 @@ module.exports.validateUP = req => new Promise((resolve, reject) => {
     // fetch the user account
     authenticationDatabase.query(`SELECT salt,password,userID
                         FROM login_credentials
-                        WHERE username = ?`,req.userData.username, (error, user) => {
+                        WHERE username = ?`, req.userData.username, (error, user) => {
 
         if (error) {
             error.details = 'checking username password'
@@ -105,7 +105,7 @@ module.exports.validateUP = req => new Promise((resolve, reject) => {
 
             user = user[0]
             req.userData.userID = user.userID
-            customLog.values(user,"user data")
+            customLog.values(user, "user data")
             userSalt = user.salt
 
             // hash the provided password with salt from database
@@ -143,42 +143,117 @@ module.exports.saveUser = req => new Promise((resolve, reject) => {
     // generates an account salt
     bcrypt.genSalt(16, (error, salt) => {
 
-        // hash the users password with the account salt
-        bcrypt.hash(req.userData.password, salt, (error, password) => {
-            if (error) {
-                error.details = 'Hashing password'
-                reject(error)
+        this.hashPasswordWithSalt(req.userData.password, salt).then((password) => {
 
-            } else {
-                // insert the user details into the database
-                authenticationDatabase.query(`INSERT INTO login_credentials
-                                (userID, username, password, salt)
-                                VALUES ?`,
-                                [[[req.userData.userID,req.userData.username,password,salt]]],
-                    (error) => {
-                        if (error) {
-                            error.details = 'Saving user'
-                            reject(error);
+            // insert the user details into the database
+            authenticationDatabase.query(`INSERT INTO login_credentials
+            (userID, username, password, salt)
+            VALUES ?`,
+                [[[req.userData.userID, req.userData.username, password, salt]]],
+                (error) => {
+                    if (error) {
+                        error.details = 'Saving user'
+                        reject(error);
 
-                        } else {
-                            customLog.prommiseResolved("new user authentication saved")
-                            resolve(req)
-                        }
-                    })
-            }
+                    } else {
+                        customLog.prommiseResolved("new user authentication saved")
+                        resolve(req)
+                    }
+                })
+
         })
 
     })
 });
 
+module.exports.hashPasswordWithSalt = (password, salt) => new Promise((resolve, reject) => {
+
+        // hash the users password with the account salt
+        bcrypt.hash(password, salt, (error, password) => {
+            if (error) {
+                error.details = 'Hashing password'
+                reject(error)
+
+            } else {
+                resolve(password)
+            }
+        })
+
+})
+
+module.exports.changeUserPassword = (req) => new Promise((resolve,reject) => {
+
+    this.getUserSalt(req.userData.userID).then((salt) => {
+
+        console.log(req.query.newPassword, salt)
+
+        // hash the users password with the account salt
+        bcrypt.hash(req.query.newPassword, salt, (error, password) => {
+            if (error) {
+                error.details = 'Hashing password'
+                reject(error)
+
+            } else {
+
+                let sql = `UPDATE login_credentials
+                SET password = ? WHERE userID = ?`
+
+                // insert the user details into the database
+                authenticationDatabase.query(sql,[password,req.userData.userID],
+                    (error) => {
+                        if (error) {
+                            error.details = 'Saving new password'
+                            reject(error);
+
+                        } else {
+                            customLog.prommiseResolved("Password Changed")
+                            resolve(req)
+                        }
+                    })
+            }
+        })
+    })
+
+
+})
+
+module.exports.getUserSalt = (userID) => new Promise((resolve, reject) => {
+
+    // check if a user id is provided
+    if (userID) {
+
+        let sql = "SELECT salt FROM login_credentials WHERE userID = ?"
+
+        authenticationDatabase.query(sql, userID, (error, results) => {
+            if (error) {
+                reject(error)
+
+                // check if at least one result exists
+            } else if (results[0]) {
+                resolve(results[0].salt)
+
+            } else {
+                reject(new Error("no user found"))
+            }
+        })
+
+
+    } else {
+        reject(new Error("no userID provided"))
+    }
+
+
+
+})
+
 // creates and saves a new acces token for a user
 module.exports.createNewToken = req => new Promise((resolve, reject) => {
     customLog.prommiseStarted("Creating New Acces Token")
-    
+
     // check if any active tokens exist
     authenticationDatabase.query(`SELECT * FROM alltokens
         WHERE userID = ?
-        AND isValid = 1`,req.userData.userID, (error, result) => {
+        AND isValid = 1`, req.userData.userID, (error, result) => {
         if (error) {
             error.details = 'No valid token found'
             reject(error);
@@ -188,7 +263,7 @@ module.exports.createNewToken = req => new Promise((resolve, reject) => {
                 // if at least one active token is found
                 // invalidate all active tokens
                 invalidateAllTokens(req.userData.userID)
-            } 
+            }
 
             // generate a new id for the acces token
             this.genID((newToken) => {
@@ -201,7 +276,7 @@ module.exports.createNewToken = req => new Promise((resolve, reject) => {
                 VALUES ?`
 
                 // save the token in the database
-                authenticationDatabase.query(sql,[[[req.userData.userToken,req.userData.userID]]] , (error) => {
+                authenticationDatabase.query(sql, [[[req.userData.userToken, req.userData.userID]]], (error) => {
                     if (error) {
                         error.details = 'saving new token'
                         reject(error)
@@ -233,10 +308,30 @@ var invalidateAllTokens = (userID) => {
     })
 };
 
+// invalidate a token
+module.exports.invalidateToken = (token) => new Promise((resolve,reject) => {
+    customLog.prommiseStarted("invalidating token")
+
+    // check if a token is provided
+    if (!token){reject(new Error("no token provided"))}
+
+    let sql = `UPDATE alltokens SET isValid = 0 WHERE Token = ?`
+
+    authenticationDatabase.query(sql, token, (error) => {
+        if (error) {
+            reject(error)
+        } else {
+            customLog.prommiseResolved("token invalidated")
+            resolve()
+        }
+    })
+
+})
+
 // checks if a username is already saved in the database
 module.exports.checkUsernameAvailable = (username) => new Promise((resolve, reject) => {
     customLog.prommiseStarted("Checking Username is Avaliable")
-    
+
     let sql = 'SELECT * FROM login_credentials WHERE username = ?'
 
     // fetch all accounts with a given username
@@ -260,7 +355,7 @@ module.exports.checkUsernameAvailable = (username) => new Promise((resolve, reje
 // saves an email verrification code with userID
 module.exports.saveEmailVerificationCode = (code, userID) => new Promise((resolve, reject) => {
     customLog.prommiseStarted("saving email verrification code")
-    
+
     let sql = 'INSERT INTO emailverification (userID,verificationID) VALUES ?'
 
     // insert userID and verrification code
@@ -283,11 +378,11 @@ module.exports.verifyEmailVerificationCode = req => new Promise((resolve, reject
     req.userData.username = req.query.username
     verificationCode = req.query.verification
 
-    customLog.incomingData(req.userData.username,"username")
-    customLog.incomingData(verificationCode,"verrification code")
-    
+    customLog.incomingData(req.userData.username, "username")
+    customLog.incomingData(verificationCode, "verrification code")
 
-    if (!verificationCode){
+
+    if (!verificationCode) {
         reject(new Error("no verrification code provided"))
 
     } else {
@@ -307,7 +402,7 @@ module.exports.verifyEmailVerificationCode = req => new Promise((resolve, reject
                 resolve(req)
 
             } else { reject(Error('Code does not exist')) }
-    })
+        })
     }
 });
 
@@ -316,7 +411,7 @@ module.exports.getUsername = (userID) => new Promise((resolve, reject) => {
     // fetches username given userID
 
     customLog.prommiseStarted("Getting username")
-    customLog.values(userID,"userID")
+    customLog.values(userID, "userID")
 
     // fetch the user account
     authenticationDatabase.query(`SELECT username FROM login_credentials WHERE userID = ?`, userID, (error, results) => {
@@ -325,12 +420,12 @@ module.exports.getUsername = (userID) => new Promise((resolve, reject) => {
 
         } if (results[0]) {
             // if a user is found
-            customLog.values(results[0].username,"username")
+            customLog.values(results[0].username, "username")
             customLog.prommiseResolved("Username Fetched")
             resolve(results[0].username)
-        
-        } else { 
-            reject(new Error("No User Found")) 
+
+        } else {
+            reject(new Error("No User Found"))
         }
     });
 });

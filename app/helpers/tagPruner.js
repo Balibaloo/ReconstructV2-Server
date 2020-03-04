@@ -8,14 +8,18 @@ the a an in with
 
 // remove non tag keywords
 module.exports.pruneNonTagsFrom = (tagList) => {
+
     // filter out a word if it is in the nonTagsList
     tagList = tagList.filter((value) => {
-        
-        if (value in this.nonTagsList) {
+            
+        if (value == "fill") {return true}
+
+        if (value in nonTagsList) {
             return false
 
         } else 
             return true
     })
+
     return tagList
 }

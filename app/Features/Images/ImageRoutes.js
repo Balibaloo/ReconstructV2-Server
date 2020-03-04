@@ -1,6 +1,6 @@
 const imagePromises = require('./imagePromises')    // import image promisses
 const customLog = require('../../helpers/CustomLogs')   // import custom logger
-const Auth = require('../Authentication/AuthenticationHelper')  // import authentication helper
+const Auth = require('../../helpers/AuthenticationHelper')  // import authentication helper
 path = require('path')  // import path system
 var multer = require('multer')  // import multer
 

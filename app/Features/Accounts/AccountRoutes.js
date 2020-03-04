@@ -1,4 +1,4 @@
-const Auth = require('../Authentication/AuthenticationHelper') // import authentication helper
+const Auth = require('../../helpers/AuthenticationHelper') // import authentication helper
 const accountPromises = require('./AccountPromises') // import account prommises
 const customLog = require('../../helpers/CustomLogs') // import custom logger
 const emails = require('../Emails/EmailsPromises') // import email promisses
@@ -43,7 +43,7 @@ module.exports = (app, db) => {
         // append database connection to the request object
         req.db = db
 
-        accountPromises.saveUserPromise(req)
+        accountPromises.saveUser(req)
             .then(Auth.saveUser)
             .then(Auth.createNewToken)
             .then(emails.sendAccountVerification)
@@ -78,6 +78,28 @@ module.exports = (app, db) => {
         })
     })
 
+    app.post("/auth/changePassword", Auth.checkToken, (req, res) => {
+
+        customLog.connectionStart("changing password")
+
+        if (req.query.newPassword) {
+
+            Auth.changeUserPassword(req)
+                .then((req) => {
+                    customLog.sendJson(res, { message: "password changed" })
+                }
+
+                ).catch((error) => {
+                    customLog.sendServerError(res, error)
+                })
+
+        } else {
+            customLog.sendUserError(res, "no password provided", 400)
+        }
+
+
+    })
+
     // login (create an auth token)
     app.get('/auth/login', (req, res) => {
         customLog.connectionStart("Logging In")
@@ -91,10 +113,11 @@ module.exports = (app, db) => {
                 .then(Auth.createNewToken)
                 .then((req) => {
 
-                    customLog.sendJson({
+                    customLog.sendJson(res, {
                         'message': 'Logged In',
                         'userToken': req.userData.userToken,
-                        "userID": req.userData.userID
+                        "userID": req.userData.userID,
+                        "username": req.userData.username
                     })
 
                 }).catch((error) => {
@@ -107,6 +130,14 @@ module.exports = (app, db) => {
         }
 
     });
+
+    app.get('/auth/logout', Auth.checkToken, (req, res) => {
+
+        // invalidate the token they used to log in
+        Auth.invalidateToken(req.userData.userToken)
+            .then(customLog.sendJson(res, { "message": "Succesfully logged out" }))
+            .catch((error) => {customLog.sendServerError(res,error,error.message)})
+    })
 
     // fetch a users profile
     app.get('/getUserProfile', (req, res) => {
@@ -133,7 +164,7 @@ module.exports = (app, db) => {
                         // add username to the user data
                         user.username = username
 
-                        customLog.sendJson({
+                        customLog.sendJson(res, {
                             "message": "Profile Fetched ",
                             "userProfile": user
                         })
@@ -166,12 +197,12 @@ module.exports = (app, db) => {
 
         accountPromises.changeWantedTags(req)
             .then((req) => {
-                customLog.sendJson(req.res,{
+                customLog.sendJson(req.res, {
                     "message": 'Wanted Tags Changed Successfully'
                 })
 
             }).catch((error) => {
-                customLog.sendServerError(res,error,error.message)
+                customLog.sendServerError(res, error, error.message)
             })
     });
 
@@ -191,29 +222,29 @@ module.exports = (app, db) => {
     app.get('/auth/getWatchedListings', Auth.checkToken, (req, res) => { })
 
     // check if a username is available
-    app.get('/checkUsernameAvailable', (req, res) => { 
+    app.get('/checkUsernameAvailable', (req, res) => {
         customLog.connectionStart("Checking Username Available")
-        customLog.incomingData(req.query.username,"username")
+        customLog.incomingData(req.query.username, "username")
 
         Auth.checkUsernameAvailable(req.query.username)
             .then((isAvailable) => {
 
-                customLog.sendJson(res,{
+                customLog.sendJson(res, {
                     "message": isAvailable ? 'username available' : "username is already in use",
                     "isAvailable": isAvailable
                 })
-        }).catch((error) => { customLog.sendServerError(req, error, error.message) })
+            }).catch((error) => { customLog.sendServerError(req, error, error.message) })
     });
 
     // check if an email is available
     app.get('/checkEmailAvailable', (req, res) => {
         customLog.connectionStart("Checking Email Available")
-        customLog.incomingData(req.query.email,"email")
+        customLog.incomingData(req.query.email, "email")
 
         checkEmailAvailable(db, req.query.email)
             .then((isAvailable) => {
 
-                customLog.sendJson(res,{
+                customLog.sendJson(res, {
                     "message": isAvailable ? "email is available" : 'email is already in use',
                     "isAvailable": isAvailable,
                 })

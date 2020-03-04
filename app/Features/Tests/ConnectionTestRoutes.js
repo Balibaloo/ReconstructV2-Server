@@ -1,9 +1,8 @@
-const Auth = require('../Authentication/AuthenticationHelper');
-const listingPromises = require('../Listings/ListingsPromises')
+const Auth = require('../../helpers/AuthenticationHelper');
 
 module.exports = (app, db)  => {
     //tests unauthenticated connections
-    app.get('/test', (req, res) => {
+    app.get('/', (req, res) => {
         console.log('test request received')
         res.json({
             "message": "Connection Successful!"

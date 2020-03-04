@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer'); // import nodemailer (used to send emails)
-const Auth = require('../Authentication/AuthenticationHelper') // import athentication helper
+const Auth = require('../../helpers/AuthenticationHelper') // import athentication helper
 const crypto = require('crypto') // import crypto to generate 
 const customLog = require('../../helpers/CustomLogs') // custom logger
 

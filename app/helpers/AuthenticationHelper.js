@@ -2,19 +2,15 @@ var mysql = require('mysql')    // import mysql
 var bcrypt = require('bcrypt')  // import bcrypt (base 64 en/decoding)
 var uniqueID = require('uniqid')    // import id generator
 var customLog = require('./CustomLogs') // import custom logger
-const DEBUG = require("../../StartServer").DEBUG
 
-const dbhost = "localhost";
-const dbuser = "ServerAuther";
-const dbpass = "G9cgh4GTVX9zU5M"; //G9cgh4GTVX9zU5M   MwXKe8rGKBVbNzp
-const dbName = "authenticationserver";
+module.exports.authDbParams = {
+    host: "localhost",
+    user: "ServerAuther",
+    password: "G9cgh4GTVX9zU5M", //G9cgh4GTVX9zU5M MwXKe8rGKBVbNzp
+    database: "authenticationserver",
+}
 
-var authenticationDatabase = mysql.createConnection({
-    host: dbhost,
-    user: dbuser,
-    password: dbpass,
-    database: dbName,
-});
+var authenticationDatabase = mysql.createConnection(this.authDbParams);
 
 // base64 decode the authorisation header to get username and password hash
 module.exports.decodeIncomingUP = req => new Promise((resolve, reject) => {
@@ -92,9 +88,12 @@ module.exports.validateUP = req => new Promise((resolve, reject) => {
     customLog.prommiseStarted("Checking Username Password")
 
     // fetch the user account
-    authenticationDatabase.query(`SELECT salt,password,userID
+    authenticationDatabase.query(`SELECT salt,password,t.userID,t.emailValid
                         FROM login_credentials
-                        WHERE username = ?`, req.userData.username, (error, user) => {
+                        JOIN (SELECT emailValid, userID FROM dataserver.user_profile) t
+                        ON login_credentials.userID = t.userID
+                        WHERE username = ?;
+                        `, req.userData.username, (error, user) => {
 
         if (error) {
             error.details = 'checking username password'
@@ -102,32 +101,40 @@ module.exports.validateUP = req => new Promise((resolve, reject) => {
 
         } else if (user[0]) {
             // if at least one user is found
-
             user = user[0]
-            req.userData.userID = user.userID
-            customLog.values(user, "user data")
-            userSalt = user.salt
+            
+            // check if the users email account has been validated
+            if (user.emailValid == 0) {
+                reject(new Error("Validate your email to log in"))
+            
+            } else {
+                req.userData.userID = user.userID
+                customLog.values(user, "user data")
+                userSalt = user.salt
 
-            // hash the provided password with salt from database
-            bcrypt.hash(req.userData.password, userSalt, (error, clientHash) => {
-                if (error) {
-                    error = error
-                    error.details = 'Hashing error'
-                    reject(error);
-
-                } else {
-                    // check if hashes match
-                    if (clientHash === user.password) {
-                        customLog.prommiseResolved("password and hash match")
-                        resolve(req)
+                // hash the provided password with salt from database
+                bcrypt.hash(req.userData.password, userSalt, (error, clientHash) => {
+                    if (error) {
+                        error.details = 'Hashing error'
+                        reject(error);
 
                     } else {
-                        error = new Error('details dont match an account')
-                        error.details = 'wrong password'
-                        reject(error);
+                        // check if hashes match
+                        if (clientHash === user.password) {
+                            customLog.prommiseResolved("password and hash match")
+                            resolve(req)
+
+                        } else {
+                            error = new Error('details dont match an account')
+                            error.details = 'wrong password'
+                            reject(error);
+                        }
                     }
-                }
-            });
+                });
+
+            }
+
+
         } else {
             error = new Error('No user found')
             error.details = 'wrong username'
@@ -168,20 +175,20 @@ module.exports.saveUser = req => new Promise((resolve, reject) => {
 
 module.exports.hashPasswordWithSalt = (password, salt) => new Promise((resolve, reject) => {
 
-        // hash the users password with the account salt
-        bcrypt.hash(password, salt, (error, password) => {
-            if (error) {
-                error.details = 'Hashing password'
-                reject(error)
+    // hash the users password with the account salt
+    bcrypt.hash(password, salt, (error, password) => {
+        if (error) {
+            error.details = 'Hashing password'
+            reject(error)
 
-            } else {
-                resolve(password)
-            }
-        })
+        } else {
+            resolve(password)
+        }
+    })
 
 })
 
-module.exports.changeUserPassword = (req) => new Promise((resolve,reject) => {
+module.exports.changeUserPassword = (req) => new Promise((resolve, reject) => {
 
     this.getUserSalt(req.userData.userID).then((salt) => {
 
@@ -199,7 +206,7 @@ module.exports.changeUserPassword = (req) => new Promise((resolve,reject) => {
                 SET password = ? WHERE userID = ?`
 
                 // insert the user details into the database
-                authenticationDatabase.query(sql,[password,req.userData.userID],
+                authenticationDatabase.query(sql, [password, req.userData.userID],
                     (error) => {
                         if (error) {
                             error.details = 'Saving new password'
@@ -309,11 +316,11 @@ var invalidateAllTokens = (userID) => {
 };
 
 // invalidate a token
-module.exports.invalidateToken = (token) => new Promise((resolve,reject) => {
+module.exports.invalidateToken = (token) => new Promise((resolve, reject) => {
     customLog.prommiseStarted("invalidating token")
 
     // check if a token is provided
-    if (!token){reject(new Error("no token provided"))}
+    if (!token) { reject(new Error("no token provided")) }
 
     let sql = `UPDATE alltokens SET isValid = 0 WHERE Token = ?`
 

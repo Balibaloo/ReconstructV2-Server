@@ -85,7 +85,7 @@ module.exports.incomingData = (object, name = null) => {
 module.exports.values = (value, name = null) => {
     if (debug.values && masterDebug){
         if (name){
-            console.log(name + " = " + value)
+                console.log(name + " = " + value)
         } else {
             console.log(value)
         }

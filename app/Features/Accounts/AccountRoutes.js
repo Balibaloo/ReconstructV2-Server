@@ -49,7 +49,7 @@ module.exports = (app, db) => {
             .then(emails.sendAccountVerification)
             .then((req) => {
                 customLog.sendJson(req.res, {
-                    'message': 'User Created',
+                    'message': 'User Created, Please validate your email',
                     'user_token': req.userData.userToken
                 })
 

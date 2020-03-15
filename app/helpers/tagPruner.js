@@ -3,7 +3,7 @@ const nonTagsList = `
 
 the a an in with
 
-`.split(" ")
+`.split(" ").concat([' '])
 
 
 // remove non tag keywords
@@ -14,7 +14,7 @@ module.exports.pruneNonTagsFrom = (tagList) => {
             
         if (value == "fill") {return true}
 
-        if (value in nonTagsList) {
+        if (nonTagsList.indexOf(value) !== -1) {
             return false
 
         } else 

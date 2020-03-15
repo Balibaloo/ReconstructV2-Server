@@ -3,25 +3,25 @@
 module.exports.DEBUG = true;
 
 // sql connection parammeters
+
+const sqlParams = {
+  host: "localhost",
+  user: "ServerData",
+  password: "SQLSECURE",
+  database: "dataserver",
+  multipleStatements: false,
+}
 const port = 8080;
-const dbhost = "localhost";
-const dbuser = "ServerData";
-const dbpass = "SQLSECURE";
-const dbName = "dataserver";
 
-
-
-
-
-
-
-
+module.exports.masterUrl = "82.3.163.116:" + port
 
 
 const bodyParser = require('body-parser'); // parses incoming JSON data
 const app = require('express')(); // initialise the application framework
 const mysql = require('mysql'); // sql connection manager
 const routines = require("./app/helpers/Routines") // custom routines
+const Auth = require("./app/helpers/AuthenticationHelper") // authentication helper
+const databaseSetup = require("./app/helpers/databaseSetup") // sql commands to set up server
 const readline = require('readline') // user input for terminal
 var exec = require('child_process').exec, child;
 
@@ -34,17 +34,10 @@ var rl = readline.createInterface({
 
 let database = null
 
-
-
 let startAPI = () => {
 
   // initialise connecion to dataserver
-  database = mysql.createConnection({
-    host: dbhost,
-    user: dbuser,
-    password: dbpass,
-    database: dbName,
-  });
+  database = mysql.createConnection(sqlParams);
 
   // set middleware parsers for incoming JSON
   app.use(bodyParser.urlencoded({
@@ -58,7 +51,9 @@ let startAPI = () => {
 
   app.listen(port, (error) => {
     console.log('Server is live on ' + port);
+    
     routines(database) // starts my routines
+    
   });
 
   startUserInput()
@@ -86,6 +81,7 @@ let startUserInput = () => {
 
 }
 
+// stop the whole server
 let stopServer = () => {
 
   console.log("Server Shutting Down")
@@ -111,45 +107,25 @@ let stopAPI = () => {
   process.kill(0)
 }
 
-let checkServerIsRunning = (callback) => {
-
-  // fetch the status of the server
-  exec("pkexec /opt/lampp/lampp status",
-    function (error, stdout, stderr) {
-
-      // calls the callback with the server status (boolean)
-      callback((["ok", "already running"].includes(stdout.split(".")[12])))
-    });
-
-
-
-}
-
 
 // START THE SERVER
-checkServerIsRunning((serverIsRunning) => {
-
-  if (serverIsRunning) {
-    startAPI()
-
-  } else {
-    exec("pkexec /opt/lampp/lampp start",
+exec("pkexec /opt/lampp/lampp start",
       function (error, stdout, stderr) {
 
         console.log('stdout: ' + stdout)
         console.log('stderr: ' + stderr)
 
         if (error !== null) {
-          console.log('exec error: ' + error);
+          console.log('xampp error: ' + error);
         }
 
         // check if the xampp is started
         if ((["ok", "already running"].includes(stdout.split(".")[12]))) {
           console.log("xampp Started")
-
-          startAPI()
+          
+          databaseSetup(Auth.authDbParams)
+            .then(() => startAPI())
+            .catch(error => console.log(error))
+          
         }
       });
-  }
-
-})

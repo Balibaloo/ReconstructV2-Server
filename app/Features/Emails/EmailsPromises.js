@@ -2,10 +2,11 @@ const nodemailer = require('nodemailer'); // import nodemailer (used to send ema
 const Auth = require('../../helpers/AuthenticationHelper') // import athentication helper
 const crypto = require('crypto') // import crypto to generate 
 const customLog = require('../../helpers/CustomLogs') // custom logger
+const mainArgs = require('../../../StartServer') // server arguments
 
 // generate a url that a user can click to verrify their email
-var buildVerifficationUrl = (systemIPandPort, verifficationId, username) => {
-    return 'http://' + systemIPandPort + '/verifyEmail?verification=' + verifficationId.toString() + "&username=" + username
+var buildVerifficationUrl = (verifficationId, username) => {
+    return 'http://' + mainArgs.masterUrl + '/verifyEmail?verification=' + verifficationId.toString() + "&username=" + username
 }
 
 // fetch a users email adress
@@ -41,7 +42,7 @@ module.exports.sendAccountVerification = async req => {
     var verrificationCode = crypto.randomBytes(20).toString('hex');
 
     // generate a clickable url to send to the user
-    var verifficationLink = buildVerifficationUrl("82.3.163.116:1234", verrificationCode, username)
+    var verifficationLink = buildVerifficationUrl(verrificationCode, username)
 
     // create a nodemailer instance
     let transporter = nodemailer.createTransport({
@@ -61,6 +62,7 @@ module.exports.sendAccountVerification = async req => {
         text: 'Hi,\n please click on the link bellow to verify your email \n\n' + verifficationLink, // plain text body
         html: '<b>Hi,<br> please click on the link bellow to verify your email <br><br>' + verifficationLink + '</b>' // html body
     }
+
     // asynchronously save the verrification code into the database
     // then send the email to the user
     await Auth.saveEmailVerificationCode(verrificationCode, req.userData.userID)

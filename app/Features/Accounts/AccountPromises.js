@@ -15,7 +15,7 @@ module.exports.setEmailVerified = req => new Promise((resolve, reject) => {
 
     let sql = 'UPDATE user_profile SET emailValid = 1 WHERE userID = ?'
 
-    req.db.query(sql, req.userData.userID, (err) => {
+    req.db.query(sql, req.userData.userID, (error) => {
         if (error) {
             reject(error)
 
@@ -40,7 +40,7 @@ module.exports.saveUser = req => new Promise((resolve, reject) => {
         // insert user
         req.db.query(`INSERT INTO user_profile (userID, fName, lName, email, phone)
                     VALUES ?`,
-            [[[req.userData.userID, req.body.first_name, req.body.last_name, req.body.email, req.body.phone]]],
+            [[[req.userData.userID, req.body.fName, req.body.lName, req.body.email, req.body.phone]]],
             (error, result) => {
                 if (error) {
                     error.details = 'saving main user'
